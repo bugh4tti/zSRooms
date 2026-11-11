@@ -1,0 +1,100 @@
+# =====================================================================
+#  zSRooms - config.yml
+#  Colores: &a, hex &#RRGGBB, hex &x&R&R&G&G&B&B y #RRGGBB
+#  IMPORTANTE: los textos con # o & van SIEMPRE entre comillas.
+# =====================================================================
+
+settings:
+  # Segundos desde que entra el 2do jugador hasta que se habilita el PvP
+  start-delay: 5
+
+  # Contadores (en segundos) para que la barrera se abra (la room se cierra).
+  # Cada uno se usa según el motivo:
+  open-delay:
+    death: 10        # alguien murió en la room
+    leave: 10        # alguien salió de la room (o tiró /spawn)
+    disconnect: 5    # alguien se desconectó
+
+  # Segundos de espera al usar /spawn dentro de una room (0 = instantáneo)
+  spawn-delay: 5
+  # Comando de spawn de tu server (sin /)
+  spawn-command: spawn
+
+  # La barrera se cierra sola cuando entra el 2do jugador
+  close-barrier-on-start: true
+  # Al abrirse la barrera, los jugadores que queden son enviados a la zona del pico
+  teleport-on-open: true
+  # Anunciar ganador también cuando el rival se desconecta
+  announce-on-disconnect: false
+
+  # Bloque por defecto de la barrera
+  default-barrier-block: GLASS
+  # Máximo de bloques de la zona de barrera (azada)
+  max-barrier-blocks: 300000
+
+  # Bloques que NO se pueden poner cuando utilities = off
+  # (un * al inicio significa "termina en", así "*_WOOL" son todas las lanas)
+  utility-blocks:
+    - COBWEB
+    - "*_WOOL"
+
+messages:
+  prefix: "&8[&bzSRooms&8] "
+  no-permission: "&cNo tenés permiso."
+  players-only: "&cSolo jugadores."
+  usage: "&cUso: &e%usage%"
+  menu-missing: "&cFalta esa sección en menu.yml."
+  room-not-found: "&cLa room &e%room% &cno existe."
+  room-exists: "&cYa existe una room con ese nombre."
+  invalid-name: "&cNombre inválido (letras, números, _ y -, máx 16)."
+  room-created: "&aRoom &e%room% &acreada. &7(%count% bloques de barrera detectados)"
+  room-deleted: "&aRoom &e%room% &aeliminada."
+  room-renamed: "&aRoom &e%old% &arenombrada a &e%room%&a."
+  selection-missing: "&cTe falta marcar: &e%missing%"
+  selection-world: "&cTodos los puntos deben estar en el mismo mundo."
+  exit-inside: "&cLa zona de expulsión (pico) debe estar FUERA de la room."
+  wand-given: "&aRecibiste: &e%wand%"
+  invalid-wand: "&cHerramienta inválida. Usá: &ehacha&c, &epico &co &eazada&c."
+  sel-pos1: "&aPos1 de la room (hacha): &e%pos%"
+  sel-pos2: "&aPos2 de la room (hacha): &e%pos%"
+  sel-exit: "&aZona de expulsión (pico): &e%pos%"
+  sel-bpos1: "&aPos1 de la barrera (azada): &e%pos%"
+  sel-bpos2: "&aPos2 de la barrera (azada): &e%pos%"
+  sel-status: "&7Estado: &fRoom1 %p1% &fRoom2 %p2% &fZona %ex% &fBarrera1 %b1% &fBarrera2 %b2%"
+  room-joined: "&aEntraste a la room &e%room%&a. &7(%players%/2)"
+  room-full: "&cLa room &e%room% &cestá llena o cerrándose. Fuiste enviado a la zona marcada."
+  start-countdown: "&eEl PvP en la room &6%room% &ecomienza en &6%time%&e."
+  fight-started: "&c¡PELEEN! &7El PvP está habilitado."
+  room-closing: "&cLa room &e%room% &cserá cerrada en &e%time%&c."
+  barrier-opened: "&aLa barrera de la room &e%room% &ase abrió."
+  win-broadcast: "&6¡El jugador &a%ganador% &6le ha ganado al jugador &c%perdedor% &6en la room &e%room%&6!"
+  win-title: "&a¡Ganaste en %room%!"
+  win-subtitle: "&e¡Felicidades %ganador%!"
+  spawn-countdown: "&eSerás enviado al spawn en &6%time%&e. &7No te muevas."
+  spawn-cancelled: "&cTeletransporte cancelado."
+  utilities-off: "&cNo podés poner telarañas ni lanas en esta room."
+  utilities-set: "&aUtilities de &e%room%&a: &e%value%"
+  keepinventory-set: "&aKeepInventory de &e%room%&a: &e%value%"
+  blocks-set: "&aBarrera de &e%room%&a: &e%value% &7(%count% bloques)"
+  effect-added: "&aEfecto &e%effect% &aañadido a &e%room%&a."
+  effect-removed: "&aEfecto &e%effect% &aquitado de &e%room%&a."
+  invalid-effect: "&cEfecto inválido. Usá nombres en inglés (speed, strength, regeneration...)."
+  invalid-time: "&cTiempo inválido. Usá segundos o &einfinite&c."
+  invalid-material: "&cEse bloque no existe o no es un bloque."
+  room-too-big: "&cLa zona de barrera es demasiado grande."
+  world-missing: "&cEl mundo de la room no está cargado."
+  reloaded: "&aConfig y menu.yml recargados."
+  none: "ninguno"
+  help:
+    - "&b&lzSRooms &7- Comandos"
+    - "&e/room &7- Abrir menú"
+    - "&e/room wand <hacha|pico|azada>"
+    - "&e/room create <nombre>"
+    - "&e/room delete <nombre>"
+    - "&e/room setname <room> <nuevo>"
+    - "&e/room utilities <room> on/off"
+    - "&e/room effects <room> add <efecto> <segundos|infinite> [nivel]"
+    - "&e/room effects <room> remove <efecto>"
+    - "&e/room keepinventory <room> true/false"
+    - "&e/room blocks <room> on/off/rescan/<MATERIAL>"
+    - "&e/room reload"
