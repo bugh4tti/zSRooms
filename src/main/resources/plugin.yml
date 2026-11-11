@@ -1,0 +1,23 @@
+name: zSRooms
+version: ${project.version}
+main: com.zsrooms.ZSRooms
+api-version: '1.16'
+author: Bughatti
+description: Rooms 1v1 con GUI, efectos, barrera editable y placeholders.
+softdepend: [PlaceholderAPI, DecentHolograms, FancyHolograms, GHolograms]
+
+commands:
+  zsrooms:
+    description: Comando principal de zSRooms
+    aliases: [rooms, room]
+
+permissions:
+  zsrooms.use:
+    description: Abrir la GUI de rooms
+    default: true
+  zsrooms.admin:
+    description: Administrar rooms
+    default: op
+  zsrooms.bypass:
+    description: Entrar a las rooms sin ocupar lugar ni ser expulsado
+    default: op
