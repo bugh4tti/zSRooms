@@ -63,7 +63,7 @@ public class Gui implements Listener {
     }
 
     private String blocksText(Room r) {
-        if (r.blocks.equals("AIR")) return val("barrier-off", "&cOFF");
+        if (!r.barrierClosed) return val("barrier-off", "&cOFF");
         return val("barrier-on", "&aON &7(%material%)").replace("%material%", r.blocks);
     }
 
@@ -249,7 +249,7 @@ public class Gui implements Listener {
                     openSettings(p, r);
                     break;
                 case "toggle-blocks": {
-                    int res = plugin.manager().toggleBlocks(r);
+                    int res = plugin.manager().toggleBarrier(r);
                     if (res == -1) p.sendMessage(plugin.msg("world-missing"));
                     else if (res == -2) p.sendMessage(plugin.msg("room-too-big"));
                     openSettings(p, r);
@@ -267,4 +267,4 @@ public class Gui implements Listener {
             e.setCancelled(true);
         }
     }
-    }
+            }
