@@ -127,6 +127,36 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
+            case "save": {
+                if (!(s instanceof Player)) {
+                    s.sendMessage(plugin.msg("players-only"));
+                    return true;
+                }
+                if (a.length < 2) {
+                    usage(s, "/room save <room>");
+                    return true;
+                }
+                Room r = room(s, a[1]);
+                if (r == null) return true;
+                Player p = (Player) s;
+                RoomManager.SaveResult res = m.saveFromSelection(r, m.selections.get(p.getUniqueId()));
+                if (res.errorKey != null) {
+                    s.sendMessage(plugin.msg(res.errorKey, "%room%", r.name, "%tool%", res.detail));
+                    return true;
+                }
+                s.sendMessage(plugin.msg("room-saved", "%room%", r.name, "%updated%", String.join(", ", res.updated)));
+                if (res.scanned) {
+                    if (res.barrierCount == -2) {
+                        s.sendMessage(plugin.msg("room-too-big"));
+                    } else if (res.barrierCount == -1) {
+                        s.sendMessage(plugin.msg("world-missing"));
+                    } else {
+                        s.sendMessage(plugin.msg("barrier-rescanned", "%count%", String.valueOf(res.barrierCount)));
+                    }
+                }
+                return true;
+            }
+
             case "delete": {
                 if (a.length < 2) {
                     usage(s, "/room delete <nombre>");
@@ -327,7 +357,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         if (!s.hasPermission("zsrooms.admin")) return new ArrayList<>();
         if (a.length == 1) {
-            return filter(Arrays.asList("wand", "create", "delete", "setname", "utilities",
+            return filter(Arrays.asList("wand", "create", "save", "delete", "setname", "utilities",
                     "effects", "keepinventory", "blocks", "reload"), a[0]);
         }
         String sub = a[0].toLowerCase();
@@ -335,7 +365,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
             if (sub.equals("wand")) {
                 return filter(Arrays.asList("hacha", "pico", "azada"), a[1]);
             }
-            if (Arrays.asList("delete", "setname", "utilities", "effects", "keepinventory", "blocks").contains(sub)) {
+            if (Arrays.asList("save", "delete", "setname", "utilities", "effects", "keepinventory", "blocks").contains(sub)) {
                 return filter(roomNames(), a[1]);
             }
             return new ArrayList<>();
@@ -366,4 +396,4 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
         }
         return new ArrayList<>();
     }
-                              }
+                                                                                                }
