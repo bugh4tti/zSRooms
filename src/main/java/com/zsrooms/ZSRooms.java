@@ -1,7 +1,9 @@
 package com.zsrooms;
 
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -77,6 +79,21 @@ public class ZSRooms extends JavaPlugin {
         loadMenu();
     }
 
+    // ---------------------------------------------------------------- sonidos
+
+    /** Reproduce el sonido de config.yml (sounds.enter / sounds.leave). */
+    public void playSound(Player p, String path) {
+        ConfigurationSection s = getConfig().getConfigurationSection("sounds." + path);
+        if (s == null) return;
+        String name = s.getString("sound", "");
+        if (name == null || name.trim().isEmpty()) return;
+        try {
+            p.playSound(p.getLocation(), name.trim(),
+                    (float) s.getDouble("volume", 1.0), (float) s.getDouble("pitch", 1.0));
+        } catch (Exception ignored) {
+        }
+    }
+
     // ---------------------------------------------------------------- colores
 
     public static String color(String s) {
@@ -120,4 +137,4 @@ public class ZSRooms extends JavaPlugin {
         String s = getConfig().getString("messages." + key, "&cMensaje faltante: " + key);
         return color(fmt(s, kv));
     }
-          }
+    }
