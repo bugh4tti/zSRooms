@@ -65,7 +65,9 @@ public class PapiHook extends PlaceholderExpansion {
             }
             case "blocks":
             case "bloques":
-                return r.blocks.equals("AIR") ? "off" : "on";
+                return r.barrierClosed ? "on" : "off";
+            case "material":
+                return r.blocks;
             case "keepinventory":
                 return String.valueOf(r.keepInventory);
             case "utilities":
