@@ -99,7 +99,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                 List<String> miss = new ArrayList<>();
                 if (sel == null || sel.pos1 == null) miss.add("pos1 de la room (hacha, click izq)");
                 if (sel == null || sel.pos2 == null) miss.add("pos2 de la room (hacha, click der)");
-                if (sel == null || sel.exit == null) miss.add("zona de expulsión (pico, click izq)");
+                if (sel == null || sel.exit == null) miss.add("zona del pico (click izq)");
                 if (sel == null || sel.bpos1 == null) miss.add("pos1 de la barrera (azada, click izq)");
                 if (sel == null || sel.bpos2 == null) miss.add("pos2 de la barrera (azada, click der)");
                 if (!miss.isEmpty()) {
@@ -118,12 +118,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                     s.sendMessage(plugin.msg("exit-inside"));
                     return true;
                 }
-                // Guarda las posiciones de los cristales para poder abrir/cerrar la barrera
-                int count = m.scanBarrier(r);
-                if (count == -2) s.sendMessage(plugin.msg("room-too-big"));
-                if (count < 0) count = 0;
-                m.save();
-                s.sendMessage(plugin.msg("room-created", "%room%", r.name, "%count%", String.valueOf(count)));
+                s.sendMessage(plugin.msg("room-created", "%room%", r.name));
                 return true;
             }
 
@@ -145,15 +140,6 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 s.sendMessage(plugin.msg("room-saved", "%room%", r.name, "%updated%", String.join(", ", res.updated)));
-                if (res.scanned) {
-                    if (res.barrierCount == -2) {
-                        s.sendMessage(plugin.msg("room-too-big"));
-                    } else if (res.barrierCount == -1) {
-                        s.sendMessage(plugin.msg("world-missing"));
-                    } else {
-                        s.sendMessage(plugin.msg("barrier-rescanned", "%count%", String.valueOf(res.barrierCount)));
-                    }
-                }
                 return true;
             }
 
@@ -285,38 +271,34 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
 
             case "blocks": {
                 if (a.length < 3) {
-                    usage(s, "/room blocks <room> on/off/rescan/<MATERIAL>");
+                    usage(s, "/room blocks <room> on/off/<MATERIAL>");
                     return true;
                 }
                 Room r = room(s, a[1]);
                 if (r == null) return true;
                 String arg = a[2];
                 int res;
-                if (arg.equalsIgnoreCase("rescan")) {
-                    res = m.scanBarrier(r);
-                    m.save();
+                String value;
+                if (arg.equalsIgnoreCase("on")) {
+                    res = m.closeBarrier(r);
+                    value = "cerrada";
+                } else if (arg.equalsIgnoreCase("off")) {
+                    res = m.openBarrier(r);
+                    value = "abierta";
                 } else {
-                    Material mat;
-                    if (arg.equalsIgnoreCase("on")) {
-                        mat = Material.matchMaterial(r.blocksOn);
-                        if (mat == null || mat == Material.AIR) mat = Material.GLASS;
-                    } else if (arg.equalsIgnoreCase("off")) {
-                        mat = Material.AIR;
-                    } else {
-                        mat = Material.matchMaterial(arg);
-                        if (mat == null || !mat.isBlock()) {
-                            s.sendMessage(plugin.msg("invalid-material"));
-                            return true;
-                        }
+                    Material mat = Material.matchMaterial(arg);
+                    if (mat == null || !mat.isBlock() || mat.isAir()) {
+                        s.sendMessage(plugin.msg("invalid-material"));
+                        return true;
                     }
-                    res = m.applyBlocks(r, mat);
+                    res = m.changeBlocks(r, mat);
+                    value = "material " + mat.name();
                 }
                 if (res == -1) {
                     s.sendMessage(plugin.msg("world-missing"));
                 } else if (res == -2) {
                     s.sendMessage(plugin.msg("room-too-big"));
                 } else {
-                    String value = r.blocks.equals("AIR") ? "off" : r.blocks;
                     s.sendMessage(plugin.msg("blocks-set", "%room%", r.name, "%value%", value, "%count%", String.valueOf(res)));
                 }
                 return true;
@@ -378,8 +360,13 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                     return filter(Arrays.asList("true", "false"), a[2]);
                 case "effects":
                     return filter(Arrays.asList("add", "remove"), a[2]);
-                case "blocks":
-                    return filter(Arrays.asList("on", "off", "rescan", "GLASS", "BARRIER", "WHITE_STAINED_GLASS", "TINTED_GLASS"), a[2]);
+                case "blocks": {
+                    List<String> mats = new ArrayList<>(Arrays.asList("on", "off"));
+                    for (Material mt : Material.values()) {
+                        if (mt.isBlock() && !mt.isAir() && !mt.name().startsWith("LEGACY_")) mats.add(mt.name());
+                    }
+                    return filter(mats, a[2]);
+                }
                 default:
                     return new ArrayList<>();
             }
@@ -396,4 +383,4 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
         }
         return new ArrayList<>();
     }
-                                                                                                }
+            }
