@@ -33,6 +33,17 @@ public class RoomManager {
         public Location pos1, pos2, exit, bpos1, bpos2;
     }
 
+    /** Resultado de /room save. */
+    public static class SaveResult {
+        /** null = todo bien; si no, la clave del mensaje de error. */
+        public String errorKey;
+        /** Herramienta a la que se refiere el error (para %tool%). */
+        public String detail = "";
+        public final List<String> updated = new ArrayList<>();
+        public boolean scanned = false;
+        public int barrierCount = 0;
+    }
+
     private final ZSRooms plugin;
     private final File file;
     private final Map<String, Room> rooms = new LinkedHashMap<>();
@@ -178,6 +189,127 @@ public class RoomManager {
         return r;
     }
 
+    /**
+     * /room save: actualiza la room con lo que el jugador marcó con las herramientas.
+     * Solo cambia lo marcado (hacha = room, azada = barrera, pico = zona de expulsión).
+     */
+    public SaveResult saveFromSelection(Room r, Selection s) {
+        SaveResult res = new SaveResult();
+        if (s == null) {
+            res.errorKey = "save-nothing";
+            return res;
+        }
+        if ((s.pos1 == null) != (s.pos2 == null)) {
+            res.errorKey = "save-incomplete";
+            res.detail = "hacha";
+            return res;
+        }
+        if ((s.bpos1 == null) != (s.bpos2 == null)) {
+            res.errorKey = "save-incomplete";
+            res.detail = "azada";
+            return res;
+        }
+
+        boolean region = s.pos1 != null;
+        boolean bregion = s.bpos1 != null;
+        boolean exit = s.exit != null;
+        if (!region && !bregion && !exit) {
+            res.errorKey = "save-nothing";
+            return res;
+        }
+        if (r.active || r.closing || !r.players.isEmpty()) {
+            res.errorKey = "room-busy";
+            return res;
+        }
+
+        // Mundo
+        String world = region ? s.pos1.getWorld().getName() : r.world;
+        boolean sameWorld = true;
+        if (region && !s.pos2.getWorld().getName().equals(world)) sameWorld = false;
+        if (bregion && (!s.bpos1.getWorld().getName().equals(world) || !s.bpos2.getWorld().getName().equals(world))) {
+            sameWorld = false;
+        }
+        if (exit && !s.exit.getWorld().getName().equals(world)) sameWorld = false;
+        if (!sameWorld) {
+            res.errorKey = "selection-world";
+            return res;
+        }
+        if (region && !world.equals(r.world) && (!bregion || !exit)) {
+            res.errorKey = "save-need-all";
+            return res;
+        }
+
+        // Nuevos límites de la room
+        int minX = r.minX, minY = r.minY, minZ = r.minZ, maxX = r.maxX, maxY = r.maxY, maxZ = r.maxZ;
+        if (region) {
+            minX = Math.min(s.pos1.getBlockX(), s.pos2.getBlockX());
+            minY = Math.min(s.pos1.getBlockY(), s.pos2.getBlockY());
+            minZ = Math.min(s.pos1.getBlockZ(), s.pos2.getBlockZ());
+            maxX = Math.max(s.pos1.getBlockX(), s.pos2.getBlockX());
+            maxY = Math.max(s.pos1.getBlockY(), s.pos2.getBlockY());
+            maxZ = Math.max(s.pos1.getBlockZ(), s.pos2.getBlockZ());
+        }
+
+        // La zona de expulsión tiene que quedar fuera de la room
+        Location newExit = exit ? s.exit : r.exit;
+        Room tmp = new Room("tmp");
+        tmp.world = world;
+        tmp.minX = minX;
+        tmp.minY = minY;
+        tmp.minZ = minZ;
+        tmp.maxX = maxX;
+        tmp.maxY = maxY;
+        tmp.maxZ = maxZ;
+        if (newExit != null && tmp.contains(newExit)) {
+            res.errorKey = "exit-inside";
+            return res;
+        }
+
+        // Aplicar
+        if (region) {
+            r.world = world;
+            r.minX = minX;
+            r.minY = minY;
+            r.minZ = minZ;
+            r.maxX = maxX;
+            r.maxY = maxY;
+            r.maxZ = maxZ;
+            res.updated.add("hacha");
+            s.pos1 = null;
+            s.pos2 = null;
+        }
+        if (bregion) {
+            r.bMinX = Math.min(s.bpos1.getBlockX(), s.bpos2.getBlockX());
+            r.bMinY = Math.min(s.bpos1.getBlockY(), s.bpos2.getBlockY());
+            r.bMinZ = Math.min(s.bpos1.getBlockZ(), s.bpos2.getBlockZ());
+            r.bMaxX = Math.max(s.bpos1.getBlockX(), s.bpos2.getBlockX());
+            r.bMaxY = Math.max(s.bpos1.getBlockY(), s.bpos2.getBlockY());
+            r.bMaxZ = Math.max(s.bpos1.getBlockZ(), s.bpos2.getBlockZ());
+            res.updated.add("azada");
+            s.bpos1 = null;
+            s.bpos2 = null;
+        }
+        if (exit) {
+            r.exit = s.exit.clone();
+            res.updated.add("pico");
+            s.exit = null;
+        }
+
+        // Si cambió la zona de barrera, se vuelven a detectar los cristales
+        if (bregion) {
+            int c = scanBarrier(r);
+            res.scanned = true;
+            res.barrierCount = c;
+            if (c < 0) {
+                r.barrier.clear();
+            } else if (c > 0 && r.blocks.equals("AIR")) {
+                r.blocks = r.blocksOn;
+            }
+        }
+        save();
+        return res;
+    }
+
     public void delete(Room r) {
         forceReset(r);
         rooms.remove(r.name.toLowerCase());
@@ -279,6 +411,11 @@ public class RoomManager {
         if (!r.players.remove(p.getUniqueId())) return;
         clearEffects(p, r);
 
+        // Mensaje de salida (si se desconectó ya no está para leerlo)
+        if (cause != Cause.DISCONNECT) {
+            p.sendMessage(plugin.msg("room-left", "%room%", r.name));
+        }
+
         // La room todavía no estaba completa: solo se limpia
         if (!r.active) {
             if (r.players.isEmpty()) reset(r);
@@ -358,6 +495,7 @@ public class RoomManager {
         boolean tp = plugin.getConfig().getBoolean("settings.teleport-on-open", true);
         for (Player p : ps) {
             clearEffects(p, r);
+            p.sendMessage(plugin.msg("room-left", "%room%", r.name));
             p.sendMessage(plugin.msg("barrier-opened", "%room%", r.name));
             if (tp && r.exit != null) p.teleport(r.exit);
         }
@@ -460,4 +598,4 @@ public class RoomManager {
         }
         return applyBlocks(r, target);
     }
-          }
+            }
