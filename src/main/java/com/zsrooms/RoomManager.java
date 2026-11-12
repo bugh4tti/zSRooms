@@ -17,12 +17,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 public class RoomManager {
 
@@ -40,8 +42,6 @@ public class RoomManager {
         /** Herramienta a la que se refiere el error (para %tool%). */
         public String detail = "";
         public final List<String> updated = new ArrayList<>();
-        public boolean scanned = false;
-        public int barrierCount = 0;
     }
 
     private final ZSRooms plugin;
@@ -63,6 +63,7 @@ public class RoomManager {
         YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection s = y.getConfigurationSection("rooms");
         if (s == null) return;
+        String defBlock = plugin.getConfig().getString("settings.default-barrier-block", "GLASS");
         for (String k : s.getKeys(false)) {
             ConfigurationSection c = s.getConfigurationSection(k);
             if (c == null) continue;
@@ -83,9 +84,14 @@ public class RoomManager {
             r.exit = c.getLocation("exit");
             r.utilities = c.getBoolean("utilities", false);
             r.keepInventory = c.getBoolean("keepinventory", false);
-            r.blocks = c.getString("blocks", "GLASS");
-            r.blocksOn = c.getString("blocks-on", "GLASS");
-            r.barrier = new ArrayList<>(c.getStringList("barrier"));
+            r.blocks = c.getString("blocks", defBlock);
+            r.barrierClosed = c.getBoolean("barrier-closed", false);
+            Material mat = Material.matchMaterial(r.blocks);
+            if (mat == null || mat.isAir() || !mat.isBlock()) {
+                // datos de una versión vieja (blocks: AIR) o material inválido
+                r.blocks = defBlock;
+                r.barrierClosed = false;
+            }
             r.lastWinner = c.getString("last-winner", "Ninguno");
             r.lastLoser = c.getString("last-loser", "Ninguno");
             for (String e : c.getStringList("effects")) {
@@ -122,8 +128,7 @@ public class RoomManager {
             y.set(p + "utilities", r.utilities);
             y.set(p + "keepinventory", r.keepInventory);
             y.set(p + "blocks", r.blocks);
-            y.set(p + "blocks-on", r.blocksOn);
-            y.set(p + "barrier", r.barrier);
+            y.set(p + "barrier-closed", r.barrierClosed);
             y.set(p + "last-winner", r.lastWinner);
             y.set(p + "last-loser", r.lastLoser);
             List<String> ef = new ArrayList<>();
@@ -164,7 +169,7 @@ public class RoomManager {
         return null;
     }
 
-    /** Devuelve null si la zona de expulsión quedó dentro de la room. */
+    /** Devuelve null si la zona del pico quedó dentro de la room. */
     public Room create(String name, Selection s) {
         Room r = new Room(name);
         r.world = s.pos1.getWorld().getName();
@@ -181,8 +186,8 @@ public class RoomManager {
         r.bMaxY = Math.max(s.bpos1.getBlockY(), s.bpos2.getBlockY());
         r.bMaxZ = Math.max(s.bpos1.getBlockZ(), s.bpos2.getBlockZ());
         r.exit = s.exit.clone();
-        r.blocksOn = plugin.getConfig().getString("settings.default-barrier-block", "GLASS");
-        r.blocks = r.blocksOn;
+        r.blocks = plugin.getConfig().getString("settings.default-barrier-block", "GLASS");
+        r.barrierClosed = false;
         if (r.contains(r.exit)) return null;
         rooms.put(name.toLowerCase(), r);
         save();
@@ -250,7 +255,7 @@ public class RoomManager {
             maxZ = Math.max(s.pos1.getBlockZ(), s.pos2.getBlockZ());
         }
 
-        // La zona de expulsión tiene que quedar fuera de la room
+        // La zona del pico tiene que quedar fuera de la room
         Location newExit = exit ? s.exit : r.exit;
         Room tmp = new Room("tmp");
         tmp.world = world;
@@ -265,7 +270,14 @@ public class RoomManager {
             return res;
         }
 
-        // Aplicar
+        // Si la barrera estaba cerrada y se mueve la zona, se abre la vieja
+        // y se vuelve a cerrar en la nueva
+        boolean reclose = false;
+        if (bregion && r.barrierClosed) {
+            openBarrier(r);
+            reclose = true;
+        }
+
         if (region) {
             r.world = world;
             r.minX = minX;
@@ -295,17 +307,7 @@ public class RoomManager {
             s.exit = null;
         }
 
-        // Si cambió la zona de barrera, se vuelven a detectar los cristales
-        if (bregion) {
-            int c = scanBarrier(r);
-            res.scanned = true;
-            res.barrierCount = c;
-            if (c < 0) {
-                r.barrier.clear();
-            } else if (c > 0 && r.blocks.equals("AIR")) {
-                r.blocks = r.blocksOn;
-            }
-        }
+        if (reclose) closeBarrier(r);
         save();
         return res;
     }
@@ -376,34 +378,20 @@ public class RoomManager {
         }
         r.players.add(p.getUniqueId());
         applyEffects(p, r);
-        p.sendMessage(plugin.msg("room-joined", "%room%", r.name, "%players%", String.valueOf(r.players.size())));
+        p.sendMessage(plugin.msg("room-joined", "%room%", r.name));
+        plugin.playSound(p, "enter");
         if (r.players.size() == 2) startFight(r);
         return true;
     }
 
+    /** Entraron los 2: se cierra la barrera y ya se puede pelear. */
     private void startFight(Room r) {
         cancelTasks(r);
         r.active = true;
-        r.fighting = false;
+        r.fighting = true;
         r.closing = false;
-
-        if (plugin.getConfig().getBoolean("settings.close-barrier-on-start", true)) {
-            Material mat = Material.matchMaterial(r.blocksOn);
-            if (mat == null || mat == Material.AIR) mat = Material.GLASS;
-            applyBlocks(r, mat);
-        }
-
-        int delay = Math.max(0, plugin.getConfig().getInt("settings.start-delay", 5));
-        String m = plugin.msg("start-countdown", "%room%", r.name, "%time%", delay + " segundos");
-        for (Player p : online(r)) p.sendMessage(m);
-
-        r.startTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            r.startTask = null;
-            if (r.active && !r.closing && r.players.size() == 2) {
-                r.fighting = true;
-                for (Player p : online(r)) p.sendMessage(plugin.msg("fight-started"));
-            }
-        }, delay * 20L);
+        closeBarrier(r);
+        for (Player p : online(r)) p.sendMessage(plugin.msg("fight-started"));
     }
 
     /** Un jugador deja la room (muerte, salida/spawn o desconexión). */
@@ -411,9 +399,10 @@ public class RoomManager {
         if (!r.players.remove(p.getUniqueId())) return;
         clearEffects(p, r);
 
-        // Mensaje de salida (si se desconectó ya no está para leerlo)
+        // Mensaje y sonido de salida (si se desconectó ya no está para verlo)
         if (cause != Cause.DISCONNECT) {
             p.sendMessage(plugin.msg("room-left", "%room%", r.name));
+            plugin.playSound(p, "leave");
         }
 
         // La room todavía no estaba completa: solo se limpia
@@ -465,12 +454,8 @@ public class RoomManager {
     private void scheduleClose(Room r, Set<UUID> participants, Cause cause) {
         r.closing = true;
         r.fighting = false;
-        if (r.startTask != null) {
-            r.startTask.cancel();
-            r.startTask = null;
-        }
         int t = Math.max(0, plugin.getConfig().getInt("settings.open-delay." + cause.name().toLowerCase(), 10));
-        String m = plugin.msg("room-closing", "%room%", r.name, "%time%", t + " segundos");
+        String m = plugin.msg("room-opening", "%room%", r.name, "%time%", t + " segundos");
         for (UUID id : participants) {
             Player pl = Bukkit.getPlayer(id);
             if (pl != null) pl.sendMessage(m);
@@ -490,12 +475,13 @@ public class RoomManager {
         r.closing = false;
         r.active = false;
 
-        applyBlocks(r, Material.AIR);
+        openBarrier(r);
 
         boolean tp = plugin.getConfig().getBoolean("settings.teleport-on-open", true);
         for (Player p : ps) {
             clearEffects(p, r);
             p.sendMessage(plugin.msg("room-left", "%room%", r.name));
+            plugin.playSound(p, "leave");
             p.sendMessage(plugin.msg("barrier-opened", "%room%", r.name));
             if (tp && r.exit != null) p.teleport(r.exit);
         }
@@ -519,10 +505,6 @@ public class RoomManager {
     }
 
     private void cancelTasks(Room r) {
-        if (r.startTask != null) {
-            r.startTask.cancel();
-            r.startTask = null;
-        }
         if (r.closeTask != null) {
             r.closeTask.cancel();
             r.closeTask = null;
@@ -538,64 +520,96 @@ public class RoomManager {
             r.fighting = false;
             r.closing = false;
             r.active = false;
-            if (wasActive) applyBlocks(r, Material.AIR);
+            if (wasActive) openBarrier(r);
         }
     }
 
     // ---------------------------------------------------------------- barrera (azada)
 
-    public static boolean isBarrierType(Material m) {
-        return m == Material.BARRIER || m.name().contains("GLASS");
+    private boolean tooBig(Room r) {
+        return r.barrierVolume() > plugin.getConfig().getInt("settings.max-barrier-blocks", 300000);
     }
 
-    /** Escanea la zona de la azada. -1 = mundo no cargado, -2 = zona muy grande. */
-    public int scanBarrier(Room r) {
-        World w = Bukkit.getWorld(r.world);
-        if (w == null) return -1;
-        if (r.barrierVolume() > plugin.getConfig().getInt("settings.max-barrier-blocks", 300000)) return -2;
-        r.barrier.clear();
+    /** Recorre la zona de la azada y cambia los bloques que cumplan la condición. */
+    private int fillBarrier(World w, Room r, Predicate<Block> test, Material to) {
+        int n = 0;
         for (int x = r.bMinX; x <= r.bMaxX; x++) {
             for (int y = r.bMinY; y <= r.bMaxY; y++) {
                 for (int z = r.bMinZ; z <= r.bMaxZ; z++) {
-                    Material t = w.getBlockAt(x, y, z).getType();
-                    if (isBarrierType(t)) r.barrier.add(x + "," + y + "," + z);
+                    Block b = w.getBlockAt(x, y, z);
+                    if (test.test(b)) {
+                        b.setType(to, false);
+                        n++;
+                    }
                 }
             }
         }
-        return r.barrier.size();
+        return n;
     }
 
-    /** Cambia todos los bloques de la barrera. Devuelve la cantidad o un código negativo. */
-    public int applyBlocks(Room r, Material mat) {
+    /**
+     * Cierra la barrera: rellena con el material los bloques vacíos de la zona
+     * (no pisa construcciones ni pone bloques donde hay un jugador).
+     * Devuelve la cantidad de bloques o -1 (mundo no cargado) / -2 (zona muy grande).
+     */
+    public int closeBarrier(Room r) {
         World w = Bukkit.getWorld(r.world);
         if (w == null) return -1;
-        if (r.barrier.isEmpty()) {
-            int c = scanBarrier(r);
-            if (c < 0) return c;
-        }
-        int n = 0;
-        for (String s : r.barrier) {
-            String[] a = s.split(",");
-            if (a.length != 3) continue;
-            try {
-                Block b = w.getBlockAt(Integer.parseInt(a[0]), Integer.parseInt(a[1]), Integer.parseInt(a[2]));
-                b.setType(mat, false);
-                n++;
-            } catch (NumberFormatException ignored) {
-            }
-        }
+        if (tooBig(r)) return -2;
+
+        Material mat = Material.matchMaterial(r.blocks);
+        if (mat == null || mat.isAir() || !mat.isBlock()) mat = Material.GLASS;
         r.blocks = mat.name();
-        if (mat != Material.AIR) r.blocksOn = mat.name();
+
+        Set<String> busy = new HashSet<>();
+        for (Player p : w.getPlayers()) {
+            Location l = p.getLocation();
+            busy.add(l.getBlockX() + "," + l.getBlockY() + "," + l.getBlockZ());
+            busy.add(l.getBlockX() + "," + (l.getBlockY() + 1) + "," + l.getBlockZ());
+        }
+
+        int n = fillBarrier(w, r,
+                b -> b.getType().isAir() && !busy.contains(b.getX() + "," + b.getY() + "," + b.getZ()),
+                mat);
+        r.barrierClosed = true;
         save();
         return n;
     }
 
-    public int toggleBlocks(Room r) {
-        Material target = Material.AIR;
-        if (r.blocks.equals("AIR")) {
-            target = Material.matchMaterial(r.blocksOn);
-            if (target == null || target == Material.AIR) target = Material.GLASS;
+    /** Abre la barrera: saca los bloques del material de la barrera dentro de la zona. */
+    public int openBarrier(Room r) {
+        World w = Bukkit.getWorld(r.world);
+        if (w == null) return -1;
+        if (tooBig(r)) return -2;
+
+        int n = 0;
+        Material mat = Material.matchMaterial(r.blocks);
+        if (mat != null && !mat.isAir()) {
+            n = fillBarrier(w, r, b -> b.getType() == mat, Material.AIR);
         }
-        return applyBlocks(r, target);
+        r.barrierClosed = false;
+        save();
+        return n;
     }
+
+    /** Cambia el material de la barrera. Si está cerrada, reemplaza los bloques puestos. */
+    public int changeBlocks(Room r, Material mat) {
+        int n = 0;
+        if (r.barrierClosed) {
+            World w = Bukkit.getWorld(r.world);
+            if (w == null) return -1;
+            if (tooBig(r)) return -2;
+            Material old = Material.matchMaterial(r.blocks);
+            if (old != null && old != mat) {
+                n = fillBarrier(w, r, b -> b.getType() == old, mat);
             }
+        }
+        r.blocks = mat.name();
+        save();
+        return n;
+    }
+
+    public int toggleBarrier(Room r) {
+        return r.barrierClosed ? openBarrier(r) : closeBarrier(r);
+    }
+        }
