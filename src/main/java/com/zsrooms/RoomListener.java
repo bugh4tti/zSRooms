@@ -48,6 +48,11 @@ public class RoomListener implements Listener {
         return o == null ? "&c✘" : "&a✔";
     }
 
+    /** Solo ignora las rooms si use-bypass está en true y tiene el permiso. */
+    private boolean hasBypass(Player p) {
+        return plugin.getConfig().getBoolean("settings.use-bypass", false) && p.hasPermission("zsrooms.bypass");
+    }
+
     // ---------------------------------------------------------------- herramientas
 
     @EventHandler
@@ -139,7 +144,7 @@ public class RoomListener implements Listener {
         }
 
         // Entró a una room
-        if (target != null && m.byPlayer(p.getUniqueId()) == null && !p.hasPermission("zsrooms.bypass")) {
+        if (target != null && m.byPlayer(p.getUniqueId()) == null && !hasBypass(p)) {
             if (!m.tryJoin(p, target) && target.exit != null) {
                 e.setTo(target.exit.clone());
             }
@@ -257,4 +262,4 @@ public class RoomListener implements Listener {
             p.sendMessage(plugin.msg("utilities-off"));
         }
     }
-  }
+    }
