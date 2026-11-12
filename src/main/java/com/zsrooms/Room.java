@@ -3,10 +3,8 @@ package com.zsrooms;
 import org.bukkit.Location;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -19,7 +17,7 @@ public class Room {
     // Región de la room (hacha)
     public int minX, minY, minZ, maxX, maxY, maxZ;
 
-    // Región de la barrera / cristales (azada)
+    // Región de la barrera (azada)
     public int bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ;
 
     // Zona de expulsión (pico)
@@ -27,12 +25,12 @@ public class Room {
 
     public boolean utilities = false;
     public boolean keepInventory = false;
-    /** Bloque actual de la barrera (AIR = abierta). */
+
+    /** Material con el que se cierra la barrera (se cambia con /room blocks). */
     public String blocks = "GLASS";
-    /** Último bloque de barrera que no fue AIR (para volver a cerrarla). */
-    public String blocksOn = "GLASS";
-    /** Posiciones "x,y,z" de los bloques de la barrera. */
-    public List<String> barrier = new ArrayList<>();
+    /** true = la barrera está cerrada (puesta), false = abierta. */
+    public boolean barrierClosed = false;
+
     /** efecto (key de Minecraft) -> {segundos (-1 = infinito), nivel} */
     public Map<String, int[]> effects = new LinkedHashMap<>();
     public String lastWinner = "Ninguno";
@@ -40,13 +38,13 @@ public class Room {
 
     // Estado en ejecución (no se guarda)
     public final Set<UUID> players = new LinkedHashSet<>();
-    /** Ya entraron los 2 jugadores (la barrera se cerró). */
+    /** Ya entraron los 2 jugadores. */
     public boolean active = false;
     /** PvP habilitado. */
     public boolean fighting = false;
     /** Contador para abrir la barrera en marcha. */
     public boolean closing = false;
-    public BukkitTask startTask, closeTask;
+    public BukkitTask closeTask;
 
     public Room(String name) {
         this.name = name;
