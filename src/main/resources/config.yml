@@ -27,6 +27,10 @@ settings:
   # Anunciar ganador también cuando el rival se desconecta
   announce-on-disconnect: false
 
+  # Si es true, quien tenga el permiso zsrooms.bypass NO entra a las rooms
+  # (ni ocupa lugar ni ve mensajes). Dejalo en false para probar siendo OP.
+  use-bypass: false
+
   # Bloque por defecto de la barrera
   default-barrier-block: GLASS
   # Máximo de bloques de la zona de barrera (azada)
@@ -50,6 +54,12 @@ messages:
   room-created: "&aRoom &e%room% &acreada. &7(%count% bloques de barrera detectados)"
   room-deleted: "&aRoom &e%room% &aeliminada."
   room-renamed: "&aRoom &e%old% &arenombrada a &e%room%&a."
+  room-saved: "&aRoom &e%room% &aactualizada. Cambiado: &e%updated%&a."
+  barrier-rescanned: "&7Barrera: &f%count% &7bloques detectados."
+  save-nothing: "&cNo marcaste nada. Usá el hacha (pos1 y pos2), la azada (pos1 y pos2) o el pico (zona)."
+  save-incomplete: "&cTe falta una esquina de la herramienta: &e%tool%&c. Marcá las dos (click izq y der)."
+  save-need-all: "&cCambiaste de mundo: marcá también la azada y el pico."
+  room-busy: "&cLa room &e%room% &cestá en uso. Esperá a que termine."
   selection-missing: "&cTe falta marcar: &e%missing%"
   selection-world: "&cTodos los puntos deben estar en el mismo mundo."
   exit-inside: "&cLa zona de expulsión (pico) debe estar FUERA de la room."
@@ -61,7 +71,8 @@ messages:
   sel-bpos1: "&aPos1 de la barrera (azada): &e%pos%"
   sel-bpos2: "&aPos2 de la barrera (azada): &e%pos%"
   sel-status: "&7Estado: &fRoom1 %p1% &fRoom2 %p2% &fZona %ex% &fBarrera1 %b1% &fBarrera2 %b2%"
-  room-joined: "&aEntraste a la room &e%room%&a. &7(%players%/2)"
+  room-joined: "&a¡Entraste a la room &e%room%&a!"
+  room-left: "&c¡Saliste de la room &e%room%&c!"
   room-full: "&cLa room &e%room% &cestá llena o cerrándose. Fuiste enviado a la zona marcada."
   start-countdown: "&eEl PvP en la room &6%room% &ecomienza en &6%time%&e."
   fight-started: "&c¡PELEEN! &7El PvP está habilitado."
@@ -90,6 +101,7 @@ messages:
     - "&e/room &7- Abrir menú"
     - "&e/room wand <hacha|pico|azada>"
     - "&e/room create <nombre>"
+    - "&e/room save <room>"
     - "&e/room delete <nombre>"
     - "&e/room setname <room> <nuevo>"
     - "&e/room utilities <room> on/off"
