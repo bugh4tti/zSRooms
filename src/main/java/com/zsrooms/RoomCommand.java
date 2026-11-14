@@ -1,5 +1,6 @@
 package com.zsrooms;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -52,6 +53,9 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
             plugin.gui().openMain((Player) s);
             return true;
         }
+
+        // /room team ... lo puede usar cualquier jugador
+        if (a[0].equalsIgnoreCase("team")) return team(s, a);
 
         if (!s.hasPermission("zsrooms.admin")) {
             s.sendMessage(plugin.msg("no-permission"));
@@ -173,6 +177,29 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 s.sendMessage(plugin.msg("room-renamed", "%old%", old, "%room%", r.name));
+                return true;
+            }
+
+            case "mode": {
+                if (a.length < 3) {
+                    usage(s, "/room mode <room> <1v1|2v2|3v3|4v4>");
+                    return true;
+                }
+                Room r = room(s, a[1]);
+                if (r == null) return true;
+                int size = Room.parseMode(a[2]);
+                if (size < 1) {
+                    s.sendMessage(plugin.msg("invalid-mode"));
+                    return true;
+                }
+                if (r.active || r.closing || !r.players.isEmpty()) {
+                    s.sendMessage(plugin.msg("room-busy", "%room%", r.name));
+                    return true;
+                }
+                r.teamSize = size;
+                m.save();
+                s.sendMessage(plugin.msg("mode-set", "%room%", r.name, "%mode%", r.modeName()));
+                plugin.teams().checkPending();
                 return true;
             }
 
@@ -306,7 +333,9 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
 
             case "reload": {
                 plugin.reloadAll();
-                s.sendMessage(plugin.msg("reloaded"));
+                RoomManager.ReloadResult rr = m.reloadFromFile();
+                s.sendMessage(plugin.msg("reloaded", "%count%", String.valueOf(rr.applied)));
+                for (String w : rr.warnings) s.sendMessage(w);
                 return true;
             }
 
@@ -317,6 +346,59 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
         }
+    }
+
+    // ---------------------------------------------------------------- /room team
+
+    private boolean team(CommandSender s, String[] a) {
+        if (!(s instanceof Player)) {
+            s.sendMessage(plugin.msg("players-only"));
+            return true;
+        }
+        Player p = (Player) s;
+        if (!p.hasPermission("zsrooms.team")) {
+            p.sendMessage(plugin.msg("no-permission"));
+            return true;
+        }
+        TeamManager tm = plugin.teams();
+        String help = "/room team <2v2|3v3|4v4> invite <nick> <aliado|enemigo>  |  /room team accept|deny|leave|info";
+        if (a.length < 2) {
+            usage(p, help);
+            return true;
+        }
+        switch (a[1].toLowerCase()) {
+            case "accept":
+                tm.accept(p, a.length >= 3 ? a[2] : null);
+                return true;
+            case "deny":
+                tm.deny(p, a.length >= 3 ? a[2] : null);
+                return true;
+            case "leave":
+                tm.leave(p);
+                return true;
+            case "info":
+                tm.info(p);
+                return true;
+            default:
+                break;
+        }
+        int size = Room.parseMode(a[1]);
+        if (size < 2 || a.length < 5 || !a[2].equalsIgnoreCase("invite")) {
+            usage(p, help);
+            return true;
+        }
+        String side = a[4].toLowerCase();
+        boolean ally;
+        if (side.equals("aliado") || side.equals("ally")) {
+            ally = true;
+        } else if (side.equals("enemigo") || side.equals("enemy")) {
+            ally = false;
+        } else {
+            usage(p, help);
+            return true;
+        }
+        tm.invite(p, size, a[3], ally);
+        return true;
     }
 
     // ---------------------------------------------------------------- tab
@@ -335,25 +417,55 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
         return l;
     }
 
+    private List<String> playerNames() {
+        List<String> l = new ArrayList<>();
+        for (Player p : Bukkit.getOnlinePlayers()) l.add(p.getName());
+        return l;
+    }
+
+    private List<String> tabTeam(String[] a) {
+        if (a.length == 2) {
+            return filter(Arrays.asList("2v2", "3v3", "4v4", "accept", "deny", "leave", "info"), a[1]);
+        }
+        String second = a[1].toLowerCase();
+        if (a.length == 3) {
+            if (second.equals("accept") || second.equals("deny")) return filter(playerNames(), a[2]);
+            if (Room.parseMode(second) >= 2) return filter(Arrays.asList("invite"), a[2]);
+        }
+        if (a.length == 4 && a[2].equalsIgnoreCase("invite")) return filter(playerNames(), a[3]);
+        if (a.length == 5 && a[2].equalsIgnoreCase("invite")) return filter(Arrays.asList("aliado", "enemigo"), a[4]);
+        return new ArrayList<>();
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
-        if (!s.hasPermission("zsrooms.admin")) return new ArrayList<>();
+        boolean admin = s.hasPermission("zsrooms.admin");
         if (a.length == 1) {
-            return filter(Arrays.asList("wand", "create", "save", "delete", "setname", "utilities",
-                    "effects", "keepinventory", "blocks", "reload"), a[0]);
+            List<String> subs = new ArrayList<>();
+            subs.add("team");
+            if (admin) {
+                subs.addAll(Arrays.asList("wand", "create", "save", "delete", "setname", "mode", "utilities",
+                        "effects", "keepinventory", "blocks", "reload"));
+            }
+            return filter(subs, a[0]);
         }
         String sub = a[0].toLowerCase();
+        if (sub.equals("team")) return tabTeam(a);
+        if (!admin) return new ArrayList<>();
+
         if (a.length == 2) {
             if (sub.equals("wand")) {
                 return filter(Arrays.asList("hacha", "pico", "azada"), a[1]);
             }
-            if (Arrays.asList("save", "delete", "setname", "utilities", "effects", "keepinventory", "blocks").contains(sub)) {
+            if (Arrays.asList("save", "delete", "setname", "mode", "utilities", "effects", "keepinventory", "blocks").contains(sub)) {
                 return filter(roomNames(), a[1]);
             }
             return new ArrayList<>();
         }
         if (a.length == 3) {
             switch (sub) {
+                case "mode":
+                    return filter(Arrays.asList("1v1", "2v2", "3v3", "4v4"), a[2]);
                 case "utilities":
                     return filter(Arrays.asList("on", "off"), a[2]);
                 case "keepinventory":
