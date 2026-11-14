@@ -36,14 +36,14 @@ public class Wands {
 
     private static ItemStack pick() {
         return make(Material.WOODEN_PICKAXE, PICK_NAME,
-                "&7Click izq: &fZona de expulsión",
+                "&7Click izq: &fZona del pico",
                 "&7Click der: &fVer estado");
     }
 
     private static ItemStack hoe() {
         return make(Material.WOODEN_HOE, HOE_NAME,
-                "&7Click izq: &fPos1 de la barrera (cristales)",
-                "&7Click der: &fPos2 de la barrera (cristales)");
+                "&7Click izq: &fPos1 de la barrera",
+                "&7Click der: &fPos2 de la barrera");
     }
 
     /** Da UNA herramienta según la opción. Devuelve false si la opción no existe. */
