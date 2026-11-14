@@ -20,6 +20,7 @@ public class ZSRooms extends JavaPlugin {
     private static final Pattern HEX_BARE = Pattern.compile("(?i)(?<!&)#([0-9a-f]{6})");
 
     private RoomManager manager;
+    private TeamManager teams;
     private Gui gui;
     private YamlConfiguration menu;
 
@@ -29,6 +30,7 @@ public class ZSRooms extends JavaPlugin {
         loadMenu();
 
         manager = new RoomManager(this);
+        teams = new TeamManager(this);
         manager.load();
         gui = new Gui(this);
 
@@ -60,6 +62,10 @@ public class ZSRooms extends JavaPlugin {
         return manager;
     }
 
+    public TeamManager teams() {
+        return teams;
+    }
+
     public Gui gui() {
         return gui;
     }
@@ -81,7 +87,7 @@ public class ZSRooms extends JavaPlugin {
 
     // ---------------------------------------------------------------- sonidos
 
-    /** Reproduce el sonido de config.yml (sounds.enter / sounds.leave). */
+    /** Reproduce el sonido de config.yml (sounds.enter / leave / countdown). */
     public void playSound(Player p, String path) {
         ConfigurationSection s = getConfig().getConfigurationSection("sounds." + path);
         if (s == null) return;
@@ -137,4 +143,4 @@ public class ZSRooms extends JavaPlugin {
         String s = getConfig().getString("messages." + key, "&cMensaje faltante: " + key);
         return color(fmt(s, kv));
     }
-    }
+}
