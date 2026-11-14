@@ -11,8 +11,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityResurrectEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -143,7 +145,7 @@ public class RoomListener implements Listener {
             m.leave(p, in, RoomManager.Cause.LEAVE);
         }
 
-        // Entró a una room
+        // Intentó entrar a una room: si está completa/ocupada o es de equipos, el pico lo manda afuera
         if (target != null && m.byPlayer(p.getUniqueId()) == null && !hasBypass(p)) {
             if (!m.tryJoin(p, target) && target.exit != null) {
                 e.setTo(target.exit.clone());
@@ -158,6 +160,7 @@ public class RoomListener implements Listener {
         if (t != null) t.cancel();
         Room r = m.byPlayer(p.getUniqueId());
         if (r != null) m.leave(p, r, RoomManager.Cause.DISCONNECT);
+        plugin.teams().onQuit(p);
     }
 
     // ---------------------------------------------------------------- PvP
@@ -176,10 +179,17 @@ public class RoomListener implements Listener {
         } else if (d instanceof Projectile && ((Projectile) d).getShooter() instanceof Player) {
             attacker = (Player) ((Projectile) d).getShooter();
         }
-        if (attacker == null) return;
+        if (attacker == null || attacker.getUniqueId().equals(victim.getUniqueId())) return;
+        if (!r.players.contains(attacker.getUniqueId())) return;
 
-        // Sin PvP durante la cuenta regresiva ni mientras la room se cierra
-        if (!r.fighting && r.players.contains(attacker.getUniqueId())) {
+        // sin PvP antes de empezar ni mientras se cierra la room
+        if (!r.fighting) {
+            e.setCancelled(true);
+            return;
+        }
+        // los aliados no se pegan entre ellos
+        if (r.match != null && !plugin.getConfig().getBoolean("team.friendly-fire", false)
+                && r.match.sameTeam(attacker.getUniqueId(), victim.getUniqueId())) {
             e.setCancelled(true);
         }
     }
@@ -202,6 +212,20 @@ public class RoomListener implements Listener {
     public void onRespawn(PlayerRespawnEvent e) {
         Location l = m.respawn.remove(e.getPlayer().getUniqueId());
         if (l != null) e.setRespawnLocation(l);
+    }
+
+    /** Al popear el tótem se borran los efectos: se vuelven a poner los de la room. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTotem(EntityResurrectEvent e) {
+        if (!(e.getEntity() instanceof Player)) return;
+        Player p = (Player) e.getEntity();
+        Room r = m.byPlayer(p.getUniqueId());
+        if (r == null) return;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (p.isOnline() && !p.isDead() && m.byPlayer(p.getUniqueId()) == r) {
+                m.applyEffects(p, r);
+            }
+        }, 2L);
     }
 
     // ---------------------------------------------------------------- /spawn con delay
@@ -252,14 +276,34 @@ public class RoomListener implements Listener {
         return false;
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    /**
+     * Prioridad HIGHEST y sin ignoreCancelled para que utilities tenga más valor
+     * que las regiones: con utilities on se puede poner aunque la región no deje.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlace(BlockPlaceEvent e) {
         Player p = e.getPlayer();
         Room r = m.byPlayer(p.getUniqueId());
-        if (r == null || r.utilities) return;
-        if (isUtilityBlock(e.getBlockPlaced().getType())) {
+        if (r == null) return;
+        if (!isUtilityBlock(e.getBlockPlaced().getType())) return;
+
+        if (r.utilities) {
+            e.setBuild(true);
+            e.setCancelled(false);
+        } else {
             e.setCancelled(true);
             p.sendMessage(plugin.msg("utilities-off"));
         }
     }
+
+    /** Con utilities on también se pueden romper las telarañas y lanas aunque la región no deje. */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onBreak(BlockBreakEvent e) {
+        Player p = e.getPlayer();
+        Room r = m.byPlayer(p.getUniqueId());
+        if (r == null || !r.utilities) return;
+        if (isUtilityBlock(e.getBlock().getType())) {
+            e.setCancelled(false);
+        }
     }
+}
