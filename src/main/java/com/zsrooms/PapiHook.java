@@ -72,9 +72,12 @@ public class PapiHook extends PlaceholderExpansion {
                 return String.valueOf(r.keepInventory);
             case "utilities":
                 return r.utilities ? "on" : "off";
+            case "mode":
+            case "modo":
+                return r.modeName();
             case "players":
             case "jugadores":
-                return r.players.size() + "/2";
+                return r.players.size() + "/" + r.capacity();
             default:
                 return null;
         }
