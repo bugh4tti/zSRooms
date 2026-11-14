@@ -1,6 +1,7 @@
 # Configuración de zSRooms
 # Colores con &, y hex con &#RRGGBB o &x&R&R&G&G&B&B
 # Los textos que tengan # o & van entre comillas
+# Las rooms se editan en room.yml (después usá /room reload)
 
 settings:
   # segundos hasta que se abre la barrera cuando alguien
@@ -10,13 +11,13 @@ settings:
     leave: 10
     disconnect: 5
 
+  # cómo se muestra el contador de apertura: chat, actionbar o both
+  countdown-display: chat
+
   # segundos de espera al usar /spawn dentro de una room (0 = sin espera)
   spawn-delay: 5
   # el comando de spawn de tu server, sin la barra
   spawn-command: spawn
-
-  # cuando se abre la barrera, mandar a los que queden a la zona del pico
-  teleport-on-open: true
 
   # anunciar al ganador también si el rival se desconecta
   announce-on-disconnect: false
@@ -30,13 +31,24 @@ settings:
   # máximo de bloques que puede tener la zona de la barrera
   max-barrier-blocks: 300000
 
-  # bloques que no se pueden poner cuando utilities está en off
+  # bloques que se controlan con /room utilities
+  # utilities off: no se pueden poner
+  # utilities on: se pueden poner y romper aunque la región no deje
   # lo que empieza con * es "termina en", así *_WOOL son todas las lanas
   utility-blocks:
     - COBWEB
     - "*_WOOL"
 
-# sonidos de entrar y salir de la room
+# rooms por equipos (2v2, 3v3, 4v4)
+team:
+  # segundos de cuenta regresiva antes de empezar el combate
+  countdown: 5
+  # segundos que dura una invitación
+  invite-seconds: 60
+  # si está en true los aliados se pueden pegar entre ellos
+  friendly-fire: false
+
+# sonidos de la room
 # se escriben como en el juego (los de /playsound), por ejemplo entity.player.levelup
 # si dejás el sound vacío ("") no suena nada
 sounds:
@@ -48,6 +60,11 @@ sounds:
     sound: "entity.enderman.teleport"
     volume: 1.0
     pitch: 1.0
+  # suena en cada segundo de los contadores ("se abre en 9s" y la cuenta del team)
+  countdown:
+    sound: "block.note_block.hat"
+    volume: 1.0
+    pitch: 1.5
 
 messages:
   prefix: "&8[&bzSRooms&8] "
@@ -80,8 +97,9 @@ messages:
   room-joined: "&a¡Entraste a la room &e%room%&a!"
   room-left: "&c¡Saliste de la room &e%room%&c!"
   room-full: "&cLa room &e%room% &cestá llena o por abrirse. Te mandé a la zona de afuera."
+  room-team-only: "&cLa room &e%room% &ces de &e%mode%&c. Para jugar armá un team con &e/room team&c."
   fight-started: "&c¡A pelear! &7Ya se puede hacer PvP."
-  room-opening: "&eLa room &6%room% &eserá abierta en &6%time%&e."
+  room-opening: "&eLa room &6%room% &ese abre en &6%time%&e."
   barrier-opened: "&aSe abrió la barrera de la room &e%room%&a."
   win-broadcast: "&6¡El jugador &a%ganador% &6le ha ganado al jugador &c%perdedor% &6en la room &e%room%&6!"
   win-title: "&a¡Ganaste en %room%!"
@@ -99,7 +117,46 @@ messages:
   invalid-material: "&cEse bloque no existe."
   room-too-big: "&cLa zona de la barrera es demasiado grande."
   world-missing: "&cEl mundo de esa room no está cargado."
-  reloaded: "&aSe recargaron config.yml y menu.yml."
+  mode-set: "&aLa room &e%room% &aahora es de &e%mode%&a."
+  invalid-mode: "&cModo inválido. Usá 1v1, 2v2, 3v3 o 4v4."
+  reloaded: "&aSe recargaron config.yml, menu.yml y room.yml &7(%count% rooms aplicadas)&a."
+  reload-unknown-room: "&eroom.yml: la room &6%room% &eno está creada, se ignora. Creala con /room create."
+  reload-room-busy: "&eroom.yml: la room &6%room% &eestá en uso, no se cambiaron zonas, barrera ni modo."
+  reload-bad-material: "&eroom.yml: en la room &6%room% &eel bloque &6%value% &eno existe, se dejó el anterior."
+  reload-exit-inside: "&eroom.yml: en la room &6%room% &ela zona del pico quedaba dentro de la room, se dejó la anterior."
+
+  # ---- teams ----
+  team-no-player: "&cEl jugador &e%player% &cno está conectado."
+  team-self: "&cNo podés invitarte a vos mismo."
+  team-in-room: "&cNo podés armar un team mientras estás en una room."
+  team-target-busy: "&e%player% &cya está en un team o en una room."
+  team-you-busy: "&cYa estás en un team o en una room."
+  team-other-mode: "&cYa tenés un team de otro modo. Salí con /room team leave."
+  team-started: "&cEse team ya empezó a pelear."
+  team-full: "&cEse team ya está completo."
+  team-no-rooms: "&cNo hay ninguna room de &e%mode%&c. Un admin la configura con /room mode."
+  team-invite-sent: "&aLe mandaste una invitación a &e%player% &acomo &e%side% &7(%mode%)&a."
+  team-invite-ally: "&eEl jugador &6%player% &ete ha invitado a participar en la room &6%mode% &ecomo su team."
+  team-invite-enemy: "&eEl jugador &6%player% &ete ha invitado a participar en la room &6%mode% &ecomo su enemigo."
+  team-accept-button: "&a&l[aceptar]"
+  team-deny-button: "&c&l[rechazar]"
+  team-no-invite: "&cNo tenés invitaciones pendientes."
+  team-invite-expired: "&cEsa invitación ya no sirve."
+  team-joined: "&a%player% se unió al team %team%."
+  team-left: "&cSaliste del team."
+  team-member-left: "&e%player% salió del team."
+  team-not-in: "&cNo estás en ningún team."
+  team-denied: "&e%player% rechazó tu invitación."
+  team-denied-you: "&cRechazaste la invitación."
+  team-waiting-room: "&eLos dos teams están completos pero no hay ninguna room de &6%mode% &elibre. Empiezan apenas se libere una."
+  team-info: "&bTeam 1: &f%team1% &7| &cTeam 2: &f%team2% &7(%mode%)"
+  team-countdown-chat: "&eEl combate empieza en &6%time%s&e."
+  team-countdown-title: "&6%time%"
+  team-countdown-subtitle: "&7Room %room% &8| &7%mode%"
+  team-fight-title: "&c¡A pelear!"
+  team-fight-subtitle: "&7Que gane el mejor team"
+  team-win-broadcast: "&6¡El team de &a%ganador% &6le ha ganado al team de &c%perdedor% &6en la room &e%room% &7(%mode%)&6!"
+
   none: "ninguno"
   help:
     - "&b&lzSRooms &7- Comandos"
@@ -109,9 +166,12 @@ messages:
     - "&e/room save <room>"
     - "&e/room delete <nombre>"
     - "&e/room setname <room> <nuevo nombre>"
+    - "&e/room mode <room> <1v1|2v2|3v3|4v4>"
     - "&e/room utilities <room> on/off"
     - "&e/room effects <room> add <efecto> <segundos|infinite> [nivel]"
     - "&e/room effects <room> remove <efecto>"
     - "&e/room keepinventory <room> true/false"
     - "&e/room blocks <room> on/off/<MATERIAL>"
-    - "&e/room reload"
+    - "&e/room team <2v2|3v3|4v4> invite <nick> <aliado|enemigo>"
+    - "&e/room team accept|deny|leave|info"
+    - "&e/room reload &7- Recarga config, menu y room.yml"
