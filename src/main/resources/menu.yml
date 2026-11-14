@@ -1,18 +1,13 @@
-# =====================================================================
-#  zSRooms - menu.yml
-#  Todos los menús tienen 54 lugares (6 filas). Slots del 0 al 53.
-#  Colores: &a, hex &#RRGGBB, hex &x&R&R&G&G&B&B y #RRGGBB
-#  IMPORTANTE: los textos con # o & van SIEMPRE entre comillas.
+# Menús de zSRooms (todos de 54 lugares, slots del 0 al 53)
+# Colores: &a, hex &#RRGGBB, &x&R&R&G&G&B&B y #RRGGBB
+# Los textos con # o & van entre comillas
 #
-#  Placeholders de rooms:
-#    %room% %players% %utilities% %keepinventory% %blocks% %effects%
-#    %winner% %loser%
+# Placeholders: %room% %mode% %players% %utilities% %keepinventory%
+#               %blocks% %effects% %winner% %loser%
+# Acciones de los items: none, close, back, toggle-utilities,
+#                        toggle-keepinventory, toggle-blocks
 #
-#  Acciones (action) de los items:
-#    none | close | back | toggle-utilities | toggle-keepinventory | toggle-blocks
-#
-#  Después de editar este archivo usá /room reload
-# =====================================================================
+# Después de editar usá /room reload
 
 values:
   enabled: "&aON"
@@ -24,9 +19,7 @@ values:
   infinite: "∞"
   seconds-suffix: "s"
 
-# ---------------------------------------------------------------------
-#  MENÚ PRINCIPAL (/room, /rooms, /zsrooms)
-# ---------------------------------------------------------------------
+# menú principal (/room)
 main:
   title: "&8Rooms"
 
@@ -35,10 +28,9 @@ main:
     name: " "
     slots: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 17, 18, 26, 27, 35, 36, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
 
-  # Lugares donde se muestran las rooms (en orden)
+  # lugares donde van las rooms, en orden
   room-slots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43]
 
-  # Items fijos del menú
   items:
     close:
       slot: 49
@@ -47,13 +39,14 @@ main:
       lore: []
       action: close
 
-  # Item de cada room según su estado: free (libre), waiting (1 jugador), full (llena/cerrándose)
+  # item de cada room según el estado: free (libre), waiting (1 jugador), full (ocupada)
   room-item:
     free:
       material: LIME_WOOL
       name: "&a&l%room%"
       lore:
         - "&7Estado: &aLibre"
+        - "&7Modo: &f%mode%"
         - "&7Jugadores: &f%players%"
         - "&7Utilities: %utilities%"
         - "&7KeepInventory: %keepinventory%"
@@ -67,6 +60,7 @@ main:
       name: "&e&l%room%"
       lore:
         - "&7Estado: &eEsperando rival"
+        - "&7Modo: &f%mode%"
         - "&7Jugadores: &f%players%"
         - "&7Utilities: %utilities%"
         - "&7KeepInventory: %keepinventory%"
@@ -80,6 +74,7 @@ main:
       name: "&c&l%room%"
       lore:
         - "&7Estado: &cOcupada"
+        - "&7Modo: &f%mode%"
         - "&7Jugadores: &f%players%"
         - "&7Utilities: %utilities%"
         - "&7KeepInventory: %keepinventory%"
@@ -89,13 +84,11 @@ main:
         - " "
         - "&eClick izq: &fIr a la zona de la room"
 
-  # Líneas extra solo para admins (zsrooms.admin)
+  # líneas extra solo para admins (zsrooms.admin)
   admin-lore:
     - "&eClick der: &fAjustes de la room"
 
-# ---------------------------------------------------------------------
-#  MENÚ DE AJUSTES DE UNA ROOM (click derecho en la room, solo admins)
-# ---------------------------------------------------------------------
+# ajustes de una room (click derecho en la room, solo admins)
 settings:
   title: "&8Room: %room%"
 
@@ -110,6 +103,7 @@ settings:
       material: NAME_TAG
       name: "&b&l%room%"
       lore:
+        - "&7Modo: &f%mode%"
         - "&7Jugadores: &f%players%"
         - "&7Último ganador: &f%winner%"
         - "&7Último perdedor: &f%loser%"
@@ -135,7 +129,7 @@ settings:
     blocks:
       slot: 24
       material: GLASS
-      name: "&eBarrera (cristales)"
+      name: "&eBarrera"
       lore:
         - "&7Estado: %blocks%"
         - " "
