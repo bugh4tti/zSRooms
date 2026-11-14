@@ -84,7 +84,8 @@ public class Gui implements Listener {
     private String ph(String s, Room r) {
         if (r == null) return s;
         return s.replace("%room%", r.name)
-                .replace("%players%", r.players.size() + "/2")
+                .replace("%mode%", r.modeName())
+                .replace("%players%", r.players.size() + "/" + r.capacity())
                 .replace("%utilities%", onOff(r.utilities))
                 .replace("%keepinventory%", onOff(r.keepInventory))
                 .replace("%blocks%", blocksText(r))
@@ -155,8 +156,8 @@ public class Gui implements Listener {
             int slot = slots.get(i);
             if (slot < 0 || slot >= 54) continue;
 
-            String state = (r.closing || r.players.size() >= 2) ? "full"
-                    : (r.players.size() == 1 ? "waiting" : "free");
+            String state = (r.active || r.closing || r.players.size() >= r.capacity()) ? "full"
+                    : (r.players.size() >= 1 ? "waiting" : "free");
             ConfigurationSection is = sec.getConfigurationSection("room-item." + state);
             if (is == null) continue;
 
@@ -267,4 +268,4 @@ public class Gui implements Listener {
             e.setCancelled(true);
         }
     }
-            }
+}
