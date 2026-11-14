@@ -3,7 +3,7 @@ version: ${project.version}
 main: com.zsrooms.ZSRooms
 api-version: '1.16'
 author: Bughatti
-description: Rooms 1v1 con GUI, efectos, barrera editable y placeholders.
+description: Rooms 1v1 y por equipos con GUI, efectos, barrera editable y placeholders.
 softdepend: [PlaceholderAPI, DecentHolograms, FancyHolograms, GHolograms]
 
 commands:
@@ -14,6 +14,9 @@ commands:
 permissions:
   zsrooms.use:
     description: Abrir la GUI de rooms
+    default: true
+  zsrooms.team:
+    description: Armar teams y mandar invitaciones (2v2, 3v3, 4v4)
     default: true
   zsrooms.admin:
     description: Administrar rooms
