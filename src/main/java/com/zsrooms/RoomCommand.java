@@ -331,6 +331,50 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
+            case "times": {
+                if (!(s instanceof Player)) {
+                    s.sendMessage(plugin.msg("players-only"));
+                    return true;
+                }
+                plugin.timeEditor().sendList((Player) s);
+                return true;
+            }
+
+            case "settime": {
+                String help = "/room settime <death|leave|disconnect|spawn|team> [segundos]";
+                if (a.length < 2) {
+                    usage(s, help);
+                    return true;
+                }
+                String key = a[1].toLowerCase();
+                if (TimeEditor.path(key) == null) {
+                    usage(s, help);
+                    return true;
+                }
+                TimeEditor te = plugin.timeEditor();
+                if (a.length >= 3) {
+                    int secs;
+                    try {
+                        secs = Integer.parseInt(a[2]);
+                    } catch (NumberFormatException ex) {
+                        s.sendMessage(plugin.msg("time-invalid", "%max%", String.valueOf(TimeEditor.max(key))));
+                        return true;
+                    }
+                    if (secs < 0 || secs > TimeEditor.max(key)) {
+                        s.sendMessage(plugin.msg("time-invalid", "%max%", String.valueOf(TimeEditor.max(key))));
+                        return true;
+                    }
+                    te.set(s, key, secs);
+                    return true;
+                }
+                if (!(s instanceof Player)) {
+                    s.sendMessage(plugin.msg("players-only"));
+                    return true;
+                }
+                te.start((Player) s, key);
+                return true;
+            }
+
             case "reload": {
                 plugin.reloadAll();
                 RoomManager.ReloadResult rr = m.reloadFromFile();
@@ -445,7 +489,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
             subs.add("team");
             if (admin) {
                 subs.addAll(Arrays.asList("wand", "create", "save", "delete", "setname", "mode", "utilities",
-                        "effects", "keepinventory", "blocks", "reload"));
+                        "effects", "keepinventory", "blocks", "times", "settime", "reload"));
             }
             return filter(subs, a[0]);
         }
@@ -456,6 +500,9 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
         if (a.length == 2) {
             if (sub.equals("wand")) {
                 return filter(Arrays.asList("hacha", "pico", "azada"), a[1]);
+            }
+            if (sub.equals("settime")) {
+                return filter(Arrays.asList(TimeEditor.KEYS), a[1]);
             }
             if (Arrays.asList("save", "delete", "setname", "mode", "utilities", "effects", "keepinventory", "blocks").contains(sub)) {
                 return filter(roomNames(), a[1]);
@@ -495,4 +542,4 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
         }
         return new ArrayList<>();
     }
-            }
+                }
