@@ -6,6 +6,7 @@
 settings:
   # segundos hasta que se abre la barrera cuando alguien
   # muere, se va de la room o se desconecta
+  # (también se cambian desde el juego: /room times)
   open-delay:
     death: 10
     leave: 10
@@ -47,6 +48,23 @@ team:
   invite-seconds: 60
   # si está en true los aliados se pueden pegar entre ellos
   friendly-fire: false
+
+# partículas que salen al marcar con cada herramienta (las ve solo quien marca)
+# poné el nombre de Particle de tu versión (FLAME, SOUL_FIRE_FLAME, COMPOSTER, END_ROD, CRIT...)
+# si dejás particle vacío ("") no sale nada
+particles:
+  # hacha
+  axe:
+    particle: FLAME
+    count: 30
+  # pico
+  pick:
+    particle: SOUL_FIRE_FLAME
+    count: 30
+  # azada
+  hoe:
+    particle: COMPOSTER
+    count: 30
 
 # sonidos de la room
 # se escriben como en el juego (los de /playsound), por ejemplo entity.player.levelup
@@ -125,6 +143,21 @@ messages:
   reload-bad-material: "&eroom.yml: en la room &6%room% &eel bloque &6%value% &eno existe, se dejó el anterior."
   reload-exit-inside: "&eroom.yml: en la room &6%room% &ela zona del pico quedaba dentro de la room, se dejó la anterior."
 
+  # ---- editar tiempos desde el juego ----
+  time-prompt: "&eEscribí en el chat el nuevo tiempo en segundos (de 0 a %max%) para: &6%label%&e. Ahora es &f%current%s&e. Escribí &ccancelar &epara salir."
+  time-set: "&a%label%: &e%time%s &a(guardado en config.yml)."
+  time-cancelled: "&cCancelaste el cambio de tiempo."
+  time-invalid: "&cEscribí solo un número de segundos (de 0 a %max%) o &ecancelar&c."
+  time-save-failed: "&cNo pude guardar en config.yml. Revisá que exista la clave &e%path%&c."
+  times-header: "&b&lTiempos &7(tocá el botón para editar)"
+  times-line: "&7- &f%label%&7: &e%time%s"
+  times-edit-button: "&a&l[click para editar]"
+  time-label-death: "Abrir la barrera al ganar (matan al rival)"
+  time-label-leave: "Abrir la barrera cuando alguien sale"
+  time-label-disconnect: "Abrir la barrera cuando alguien se desconecta"
+  time-label-spawn: "Espera del /spawn dentro de una room"
+  time-label-team: "Cuenta regresiva del combate por equipos"
+
   # ---- teams ----
   team-no-player: "&cEl jugador &e%player% &cno está conectado."
   team-self: "&cNo podés invitarte a vos mismo."
@@ -172,6 +205,8 @@ messages:
     - "&e/room effects <room> remove <efecto>"
     - "&e/room keepinventory <room> true/false"
     - "&e/room blocks <room> on/off/<MATERIAL>"
+    - "&e/room times &7- Lista de tiempos con [click para editar]"
+    - "&e/room settime <death|leave|disconnect|spawn|team> [segundos]"
     - "&e/room team <2v2|3v3|4v4> invite <nick> <aliado|enemigo>"
     - "&e/room team accept|deny|leave|info"
     - "&e/room reload &7- Recarga config, menu y room.yml"
