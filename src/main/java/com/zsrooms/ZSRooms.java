@@ -1,5 +1,7 @@
 package com.zsrooms;
 
+import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,6 +23,7 @@ public class ZSRooms extends JavaPlugin {
 
     private RoomManager manager;
     private TeamManager teams;
+    private TimeEditor timeEditor;
     private Gui gui;
     private YamlConfiguration menu;
 
@@ -31,6 +34,7 @@ public class ZSRooms extends JavaPlugin {
 
         manager = new RoomManager(this);
         teams = new TeamManager(this);
+        timeEditor = new TimeEditor(this);
         manager.load();
         gui = new Gui(this);
 
@@ -43,6 +47,7 @@ public class ZSRooms extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new RoomListener(this), this);
         getServer().getPluginManager().registerEvents(gui, this);
+        getServer().getPluginManager().registerEvents(timeEditor, this);
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new PapiHook(this).register();
@@ -66,6 +71,10 @@ public class ZSRooms extends JavaPlugin {
         return teams;
     }
 
+    public TimeEditor timeEditor() {
+        return timeEditor;
+    }
+
     public Gui gui() {
         return gui;
     }
@@ -85,7 +94,7 @@ public class ZSRooms extends JavaPlugin {
         loadMenu();
     }
 
-    // ---------------------------------------------------------------- sonidos
+    // ---------------------------------------------------------------- sonidos y partículas
 
     /** Reproduce el sonido de config.yml (sounds.enter / leave / countdown). */
     public void playSound(Player p, String path) {
@@ -97,6 +106,21 @@ public class ZSRooms extends JavaPlugin {
             p.playSound(p.getLocation(), name.trim(),
                     (float) s.getDouble("volume", 1.0), (float) s.getDouble("pitch", 1.0));
         } catch (Exception ignored) {
+        }
+    }
+
+    /** Partículas al marcar con una herramienta ("axe", "pick" o "hoe"). Las ve solo quien marca. */
+    public void wandParticle(Player p, Location block, String tool) {
+        ConfigurationSection s = getConfig().getConfigurationSection("particles." + tool);
+        if (s == null) return;
+        String name = s.getString("particle", "");
+        if (name == null || name.trim().isEmpty()) return;
+        try {
+            Particle part = Particle.valueOf(name.trim().toUpperCase());
+            int count = Math.max(1, Math.min(200, s.getInt("count", 30)));
+            p.spawnParticle(part, block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5,
+                    count, 0.35, 0.35, 0.35, 0.02);
+        } catch (Exception | LinkageError ignored) {
         }
     }
 
