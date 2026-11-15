@@ -6,14 +6,17 @@
 #   hub      -> el que se abre con /room
 #   main     -> la lista de rooms (se abre con el botón "Rooms" del hub)
 #   settings -> ajustes de una room (click derecho en la room, solo admins)
+#   bet      -> el menú de apuesta (se abre solo cuando entran los 2 a una room de apuesta)
 #
-# Placeholders en cualquier menú:
+# Placeholders en cualquier menú (hub, main, settings):
 #   %player% %rooms% %open_death% %open_leave% %open_disconnect%
 #   %team_countdown% %spawn_delay%
 # Placeholders de rooms (lista y ajustes):
 #   %room% %mode% %players% %utilities% %keepinventory% %blocks% %effects% %winner% %loser%
+# Placeholders del menú de apuesta:
+#   %room% %player% %rival% %items% %rival_items% %time%
 #
-# Cada item puede tener:
+# Cada item (hub, main, settings) puede tener:
 #   action: una sola acción
 #   actions: una lista de acciones (se hacen con cualquier click)
 #   left-actions / right-actions: solo con click izquierdo / derecho
@@ -34,7 +37,7 @@
 #   back (vuelve al menú anterior), close, none
 #
 # Para cambiar un tiempo desde el juego: "[player] room settime death"
-# (death, leave, disconnect, spawn o team). Te pide el número en el chat.
+# (death, leave, disconnect, spawn, team o bet). Te pide el número en el chat.
 # Después de editar este archivo usá /room reload
 
 values:
@@ -137,6 +140,7 @@ hub:
       lore:
         - "&7Te manda al chat la lista de tiempos"
         - "&7con un [click para editar] en cada uno"
+        - "&7(incluye el contador de la apuesta)"
         - " "
         - "&eClick para abrir la lista"
       actions:
@@ -303,3 +307,97 @@ settings:
       name: "&cVolver"
       lore: []
       action: back
+
+# ---------------------------------------------------------------------
+# bet: el menú de apuesta (estilo /trade)
+# Lado izquierdo = tus items, lado derecho = los items del rival,
+# columna del medio = botones.
+# ---------------------------------------------------------------------
+bet:
+  title: "&8Apuesta &7| &8%room%"
+
+  # decoración de relleno
+  border:
+    material: GRAY_STAINED_GLASS_PANE
+    name: " "
+    slots: [0, 1, 3, 5, 7, 8, 45, 46, 47, 48, 49, 50, 51, 52, 53]
+
+  # lugares para los items (misma cantidad de cada lado)
+  own-slots: [9, 10, 11, 12, 18, 19, 20, 21, 27, 28, 29, 30, 36, 37, 38, 39]
+  other-slots: [14, 15, 16, 17, 23, 24, 25, 26, 32, 33, 34, 35, 41, 42, 43, 44]
+
+  # items de decoración (cada uno con su slot)
+  items:
+    own-label:
+      slot: 2
+      material: LIME_STAINED_GLASS_PANE
+      name: "&a&lTu apuesta"
+      lore:
+        - "&7%player%"
+        - "&7Items: &f%items%"
+    other-label:
+      slot: 6
+      material: RED_STAINED_GLASS_PANE
+      name: "&c&lApuesta de %rival%"
+      lore:
+        - "&7Items: &f%rival_items%"
+
+  # botones: accept/accepted comparten el slot de accept,
+  # other-waiting/other-accepted el de other-waiting,
+  # countdown-idle/countdown-running el de countdown-idle
+  buttons:
+    accept:
+      slot: 22
+      material: LIME_WOOL
+      name: "&a&l✔ ACEPTAR"
+      lore:
+        - "&7Apostás &f%items% &7items contra"
+        - "&f%rival_items% &7items de %rival%."
+        - " "
+        - "&eClick para aceptar"
+    accepted:
+      material: EMERALD_BLOCK
+      name: "&a&l✔ ACEPTADO"
+      lore:
+        - "&7Esperando a %rival%..."
+        - " "
+        - "&eClick para quitar tu aceptación"
+    reject:
+      slot: 31
+      material: RED_WOOL
+      name: "&c&l✘ RECHAZAR"
+      lore:
+        - "&7Cancela la apuesta y se te"
+        - "&7devuelven los items."
+    clear:
+      slot: 40
+      material: HOPPER
+      name: "&e&lRetirar mis items"
+      lore:
+        - "&7Te devuelve todos tus items"
+        - "&7apostados."
+    other-waiting:
+      slot: 13
+      material: PAPER
+      name: "&e%rival% todavía no aceptó"
+      lore:
+        - "&7Su apuesta: &f%rival_items% &7items"
+    other-accepted:
+      material: LIME_DYE
+      name: "&a%rival% aceptó"
+      lore:
+        - "&7Su apuesta: &f%rival_items% &7items"
+    countdown-idle:
+      slot: 4
+      material: CLOCK
+      name: "&e&lApuesta"
+      lore:
+        - "&7Tocá un item de tu inventario"
+        - "&7para apostarlo. Cuando los dos"
+        - "&7acepten empieza el contador."
+    countdown-running:
+      material: CLOCK
+      name: "&e&lConfirmando en &f%time%s"
+      lore:
+        - "&7Para cancelar tocá rechazar"
+        - "&7o quitá tu aceptación."
