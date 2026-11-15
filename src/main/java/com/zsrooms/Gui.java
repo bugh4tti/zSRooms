@@ -7,6 +7,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
@@ -219,13 +220,31 @@ public class Gui implements Listener {
 
     // ---------------------------------------------------------------- acciones
 
+    private String clickKey(ClickType t) {
+        switch (t) {
+            case LEFT:
+                return "left-actions";
+            case RIGHT:
+                return "right-actions";
+            case SHIFT_LEFT:
+                return "shift-left-actions";
+            case SHIFT_RIGHT:
+                return "shift-right-actions";
+            case MIDDLE:
+                return "middle-actions";
+            default:
+                return null;
+        }
+    }
+
     /** Junta las acciones del item según el click y las ejecuta en orden. */
-    private void runItem(Player p, Holder h, ConfigurationSection sec, boolean right) {
+    private void runItem(Player p, Holder h, ConfigurationSection sec, ClickType click) {
         List<String> acts = new ArrayList<>();
         String single = sec.getString("action");
         if (single != null) acts.add(single);
         acts.addAll(sec.getStringList("actions"));
-        acts.addAll(sec.getStringList(right ? "right-actions" : "left-actions"));
+        String key = clickKey(click);
+        if (key != null) acts.addAll(sec.getStringList(key));
         for (String a : acts) run(p, h, a);
     }
 
@@ -360,7 +379,7 @@ public class Gui implements Listener {
         // click en un item con acciones (hub, botones de la lista y ajustes)
         ConfigurationSection sec = h.items.get(slot);
         if (sec == null) return;
-        runItem(p, h, sec, e.isRightClick());
+        runItem(p, h, sec, e.getClick());
     }
 
     @EventHandler
@@ -369,4 +388,4 @@ public class Gui implements Listener {
             e.setCancelled(true);
         }
     }
-                                                     }
+}
