@@ -3,7 +3,7 @@
 # Los textos con # o & van entre comillas
 #
 # Menús:
-#   hub      -> el que se abre con /room (el nuevo)
+#   hub      -> el que se abre con /room
 #   main     -> la lista de rooms (se abre con el botón "Rooms" del hub)
 #   settings -> ajustes de una room (click derecho en la room, solo admins)
 #
@@ -17,10 +17,12 @@
 #   action: una sola acción
 #   actions: una lista de acciones (se hacen con cualquier click)
 #   left-actions / right-actions: solo con click izquierdo / derecho
+#   shift-left-actions / shift-right-actions: con shift + click izquierdo / derecho
+#   middle-actions: con click del medio
 # Las acciones que llevan [ ] van SIEMPRE entre comillas.
 #
 # Acciones:
-#   "[menu] hub"          abre el menú nuevo
+#   "[menu] hub"          abre el menú principal
 #   "[menu] rooms"        abre la lista de rooms
 #   "[tp] arena1"         te lleva a la zona de esa room
 #   "[close]"             cierra el menú
@@ -31,8 +33,9 @@
 #   toggle-utilities, toggle-keepinventory, toggle-blocks (solo en settings)
 #   back (vuelve al menú anterior), close, none
 #
-# Los tiempos de abrir la barrera se cambian en config.yml (settings.open-delay)
-# Después de editar usá /room reload
+# Para cambiar un tiempo desde el juego: "[player] room settime death"
+# (death, leave, disconnect, spawn o team). Te pide el número en el chat.
+# Después de editar este archivo usá /room reload
 
 values:
   enabled: "&aON"
@@ -56,19 +59,8 @@ hub:
     slots: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 17, 18, 26, 27, 35, 36, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
 
   items:
-    tiempos:
-      slot: 20
-      material: CLOCK
-      name: "&e&lTiempo para abrir la barrera"
-      lore:
-        - "&7Cuando ganás (matan al rival): &f%open_death%s"
-        - "&7Cuando alguien sale de la room: &f%open_leave%s"
-        - "&7Cuando alguien se desconecta: &f%open_disconnect%s"
-        - " "
-        - "&8Se cambia en config.yml"
-      action: none
     rooms:
-      slot: 22
+      slot: 11
       material: ENDER_EYE
       name: "&a&lRooms"
       lore:
@@ -77,18 +69,89 @@ hub:
         - "&eClick para ver la lista"
       action: "[menu] rooms"
     teams:
-      slot: 24
+      slot: 15
       material: DIAMOND_SWORD
       name: "&b&lTeams 2v2, 3v3 y 4v4"
       lore:
         - "&7Armá tu team e invitá a tus aliados"
-        - "&7y a tus rivales. La cuenta regresiva"
-        - "&7antes de pelear es de &f%team_countdown%s&7."
+        - "&7y a tus rivales."
         - " "
         - "&eClick para ver cómo se usa"
       actions:
         - "[close]"
         - "[message] &7Usá &e/room team <2v2|3v3|4v4> invite <nick> <aliado|enemigo>"
+
+    time-death:
+      slot: 29
+      material: CLOCK
+      name: "&e&lAl ganar &7(matan al rival)"
+      lore:
+        - "&7Tiempo para abrir la barrera: &f%open_death%s"
+        - " "
+        - "&eShift + click der: &fcambiar el tiempo"
+        - "&eClick der: &fver la lista para editar"
+      shift-right-actions:
+        - "[player] room settime death"
+      right-actions:
+        - "[player] room times"
+    time-leave:
+      slot: 31
+      material: CLOCK
+      name: "&e&lCuando alguien sale"
+      lore:
+        - "&7Tiempo para abrir la barrera: &f%open_leave%s"
+        - " "
+        - "&eShift + click der: &fcambiar el tiempo"
+        - "&eClick der: &fver la lista para editar"
+      shift-right-actions:
+        - "[player] room settime leave"
+      right-actions:
+        - "[player] room times"
+    time-disconnect:
+      slot: 33
+      material: CLOCK
+      name: "&e&lCuando alguien se desconecta"
+      lore:
+        - "&7Tiempo para abrir la barrera: &f%open_disconnect%s"
+        - " "
+        - "&eShift + click der: &fcambiar el tiempo"
+        - "&eClick der: &fver la lista para editar"
+      shift-right-actions:
+        - "[player] room settime disconnect"
+      right-actions:
+        - "[player] room times"
+    time-spawn:
+      slot: 38
+      material: COMPASS
+      name: "&e&lEspera del /spawn"
+      lore:
+        - "&7Segundos de espera dentro de una room: &f%spawn_delay%s"
+        - " "
+        - "&eShift + click der: &fcambiar el tiempo"
+      shift-right-actions:
+        - "[player] room settime spawn"
+    times-chat:
+      slot: 40
+      material: WRITABLE_BOOK
+      name: "&a&lEditar tiempos"
+      lore:
+        - "&7Te manda al chat la lista de tiempos"
+        - "&7con un [click para editar] en cada uno"
+        - " "
+        - "&eClick para abrir la lista"
+      actions:
+        - "[close]"
+        - "[player] room times"
+    time-team:
+      slot: 42
+      material: IRON_SWORD
+      name: "&e&lCuenta regresiva de teams"
+      lore:
+        - "&7Segundos antes de empezar el combate: &f%team_countdown%s"
+        - " "
+        - "&eShift + click der: &fcambiar el tiempo"
+      shift-right-actions:
+        - "[player] room settime team"
     close:
       slot: 49
       material: BARRIER
@@ -98,7 +161,7 @@ hub:
 
     # ejemplo: un botón para ir a una room (el nombre tiene que existir)
     # ir-arena1:
-    #   slot: 31
+    #   slot: 22
     #   material: ENDER_PEARL
     #   name: "&b&lIr a arena1"
     #   lore:
