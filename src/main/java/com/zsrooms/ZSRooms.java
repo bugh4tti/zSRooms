@@ -23,6 +23,7 @@ public class ZSRooms extends JavaPlugin {
 
     private RoomManager manager;
     private TeamManager teams;
+    private BetManager bets;
     private TimeEditor timeEditor;
     private Gui gui;
     private YamlConfiguration menu;
@@ -34,8 +35,10 @@ public class ZSRooms extends JavaPlugin {
 
         manager = new RoomManager(this);
         teams = new TeamManager(this);
+        bets = new BetManager(this);
         timeEditor = new TimeEditor(this);
         manager.load();
+        bets.load();
         gui = new Gui(this);
 
         RoomCommand cmd = new RoomCommand(this);
@@ -47,6 +50,7 @@ public class ZSRooms extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new RoomListener(this), this);
         getServer().getPluginManager().registerEvents(gui, this);
+        getServer().getPluginManager().registerEvents(bets, this);
         getServer().getPluginManager().registerEvents(timeEditor, this);
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -69,6 +73,10 @@ public class ZSRooms extends JavaPlugin {
 
     public TeamManager teams() {
         return teams;
+    }
+
+    public BetManager bets() {
+        return bets;
     }
 
     public TimeEditor timeEditor() {
