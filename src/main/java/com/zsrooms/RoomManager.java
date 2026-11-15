@@ -85,6 +85,7 @@ public class RoomManager {
             r.blocks = defBlock;
             readRoom(r, c);
             fixBounds(r);
+            if (r.teamSize > 1) r.bet = false;
             Material mat = Material.matchMaterial(r.blocks);
             if (mat == null || mat.isAir() || !mat.isBlock()) {
                 r.blocks = defBlock;
@@ -114,6 +115,7 @@ public class RoomManager {
         if (ex != null) r.exit = ex;
         r.utilities = c.getBoolean("utilities", r.utilities);
         r.keepInventory = c.getBoolean("keepinventory", r.keepInventory);
+        r.bet = c.getBoolean("bet", r.bet);
         r.blocks = c.getString("blocks", r.blocks);
         r.barrierClosed = c.getBoolean("barrier-closed", r.barrierClosed);
         r.lastWinner = c.getString("last-winner", r.lastWinner);
@@ -162,11 +164,13 @@ public class RoomManager {
                 + "Se puede editar a mano, pero las rooms tienen que estar creadas con /room create.\n"
                 + "Despues de editar usa /room reload enseguida.\n"
                 + "mode: 1v1, 2v2, 3v3 o 4v4\n"
+                + "bet: true/false (room de apuesta, solo 1v1)\n"
                 + "effects: efecto:segundos:nivel (segundos -1 = infinito)");
         for (Room r : rooms.values()) {
             String p = "rooms." + r.name + ".";
             y.set(p + "world", r.world);
             y.set(p + "mode", r.modeName());
+            y.set(p + "bet", r.bet);
             y.set(p + "min.x", r.minX);
             y.set(p + "min.y", r.minY);
             y.set(p + "min.z", r.minZ);
@@ -227,6 +231,7 @@ public class RoomManager {
         t.exit = r.exit == null ? null : r.exit.clone();
         t.utilities = r.utilities;
         t.keepInventory = r.keepInventory;
+        t.bet = r.bet;
         t.blocks = r.blocks;
         t.barrierClosed = r.barrierClosed;
         t.teamSize = r.teamSize;
@@ -279,6 +284,7 @@ public class RoomManager {
             Room t = copyOf(r);
             readRoom(t, c);
             fixBounds(t);
+            if (t.teamSize > 1) t.bet = false;
             t.barrierClosed = r.barrierClosed; // el estado de la barrera no se edita a mano
 
             Material mat = Material.matchMaterial(t.blocks);
@@ -308,16 +314,17 @@ public class RoomManager {
             r.lastWinner = t.lastWinner;
             r.lastLoser = t.lastLoser;
 
-            // zonas, barrera, salida y modo: solo si la room está libre
+            // zonas, barrera, salida, modo y apuesta: solo si la room está libre
             boolean sameGeo = Objects.equals(r.world, t.world) && sameRegion(r, t)
                     && sameBarrier(r, t) && Objects.equals(r.exit, t.exit);
-            boolean sameMode = r.teamSize == t.teamSize;
+            boolean sameMode = r.teamSize == t.teamSize && r.bet == t.bet;
             if (!(sameGeo && sameMode)) {
                 if (busy) {
                     res.warnings.add(plugin.msg("reload-room-busy", "%room%", r.name));
                 } else {
                     if (!sameMode) {
                         r.teamSize = t.teamSize;
+                        r.bet = t.bet;
                         modeChanged = true;
                     }
                     if (!sameGeo) {
@@ -578,8 +585,17 @@ public class RoomManager {
         applyEffects(p, r);
         p.sendMessage(plugin.msg("room-joined", "%room%", r.name));
         plugin.playSound(p, "enter");
-        if (r.players.size() == 2) startFight(r);
+        if (r.players.size() == 2) {
+            // room de apuesta: primero el menú, el PvP empieza cuando se confirma
+            if (r.bet) plugin.bets().start(r);
+            else startFight(r);
+        }
         return true;
+    }
+
+    /** Empieza el duelo 1v1 (también lo usa la apuesta cuando queda confirmada). */
+    public void startDuel(Room r) {
+        if (r.players.size() == 2) startFight(r);
     }
 
     /** Entraron los 2: se cierra la barrera y ya se puede pelear. */
@@ -590,6 +606,23 @@ public class RoomManager {
         r.closing = false;
         closeBarrier(r);
         for (Player p : online(r)) p.sendMessage(plugin.msg("fight-started"));
+    }
+
+    /** Saca a todos de la room y la deja libre (por ejemplo si se cancela una apuesta). */
+    public void ejectAll(Room r) {
+        cancelTasks(r);
+        List<Player> ps = online(r);
+        r.players.clear();
+        r.fighting = false;
+        r.closing = false;
+        r.active = false;
+        for (Player p : ps) {
+            clearEffects(p, r);
+            p.sendMessage(plugin.msg("room-left", "%room%", r.name));
+            plugin.playSound(p, "leave");
+            if (r.exit != null) p.teleport(r.exit);
+        }
+        plugin.teams().checkPending();
     }
 
     // ---------------------------------------------------------------- equipos (2v2, 3v3, 4v4)
@@ -727,6 +760,9 @@ public class RoomManager {
         if (!r.players.remove(p.getUniqueId())) return;
         clearEffects(p, r);
 
+        // si estaban en el menú de apuesta (sin confirmar), se cancela y se devuelven los items
+        plugin.bets().onPlayerLeft(r, p.getName());
+
         if (cause != Cause.DISCONNECT) {
             p.sendMessage(plugin.msg("room-left", "%room%", r.name));
             plugin.playSound(p, "leave");
@@ -742,8 +778,9 @@ public class RoomManager {
             if (r.players.isEmpty()) openRoom(r);
             return;
         }
-        // se fueron todos
+        // se fueron todos (si había apuesta confirmada, se devuelve)
         if (r.players.isEmpty()) {
+            plugin.bets().refund(r);
             openRoom(r);
             return;
         }
@@ -760,10 +797,14 @@ public class RoomManager {
             if (a > 0 && b > 0) return; // los dos teams siguen en pie
             participants.addAll(mt.all());
             if (announce) announceTeamWin(r, mt, b == 0);
-        } else if (announce) {
+        } else {
             Player winner = null;
             for (Player o : online(r)) winner = o;
-            if (winner != null) announceWin(winner, p, r);
+            if (winner != null) {
+                // si había apuesta confirmada, el ganador se lleva todo
+                plugin.bets().settle(r, winner, p);
+                if (announce) announceWin(winner, p, r);
+            }
         }
         scheduleClose(r, participants, cause);
     }
@@ -867,6 +908,7 @@ public class RoomManager {
 
     /** Limpia el estado sin tocar los bloques (se usa al borrar una room). */
     public void forceReset(Room r) {
+        plugin.bets().refund(r);
         cancelTasks(r);
         for (Player p : online(r)) clearEffects(p, r);
         r.players.clear();
@@ -888,6 +930,8 @@ public class RoomManager {
     }
 
     public void shutdown() {
+        // primero se devuelven las apuestas (menú abierto o items en escrow)
+        plugin.bets().shutdown();
         for (Room r : rooms.values()) {
             boolean wasActive = r.active;
             cancelTasks(r);
@@ -992,4 +1036,4 @@ public class RoomManager {
     public int toggleBarrier(Room r) {
         return r.barrierClosed ? openBarrier(r) : closeBarrier(r);
     }
-        }
+            }
