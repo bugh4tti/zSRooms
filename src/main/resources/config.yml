@@ -49,6 +49,15 @@ team:
   # si está en true los aliados se pueden pegar entre ellos
   friendly-fire: false
 
+# apuestas (rooms con /room bet <room> on)
+bet:
+  # segundos del contador cuando los dos aceptan (suena el reloj en cada segundo)
+  countdown: 10
+  # mínimo de items que tiene que apostar cada uno para poder aceptar (0 = sin mínimo)
+  min-items: 1
+  # items que no se pueden apostar (nombres de Material, ej: BEDROCK)
+  blocked-items: []
+
 # partículas que salen al marcar con cada herramienta (las ve solo quien marca)
 # poné el nombre de Particle de tu versión (FLAME, SOUL_FIRE_FLAME, COMPOSTER, END_ROD, CRIT...)
 # si dejás particle vacío ("") no sale nada
@@ -78,7 +87,7 @@ sounds:
     sound: "entity.enderman.teleport"
     volume: 1.0
     pitch: 1.0
-  # suena en cada segundo de los contadores ("se abre en 9s" y la cuenta del team)
+  # suena en cada segundo de los contadores (apertura, teams y apuesta)
   countdown:
     sound: "block.note_block.hat"
     volume: 1.0
@@ -139,7 +148,7 @@ messages:
   invalid-mode: "&cModo inválido. Usá 1v1, 2v2, 3v3 o 4v4."
   reloaded: "&aSe recargaron config.yml, menu.yml y room.yml &7(%count% rooms aplicadas)&a."
   reload-unknown-room: "&eroom.yml: la room &6%room% &eno está creada, se ignora. Creala con /room create."
-  reload-room-busy: "&eroom.yml: la room &6%room% &eestá en uso, no se cambiaron zonas, barrera ni modo."
+  reload-room-busy: "&eroom.yml: la room &6%room% &eestá en uso, no se cambiaron zonas, barrera, modo ni apuesta."
   reload-bad-material: "&eroom.yml: en la room &6%room% &eel bloque &6%value% &eno existe, se dejó el anterior."
   reload-exit-inside: "&eroom.yml: en la room &6%room% &ela zona del pico quedaba dentro de la room, se dejó la anterior."
 
@@ -157,6 +166,26 @@ messages:
   time-label-disconnect: "Abrir la barrera cuando alguien se desconecta"
   time-label-spawn: "Espera del /spawn dentro de una room"
   time-label-team: "Cuenta regresiva del combate por equipos"
+  time-label-bet: "Contador de la apuesta antes de pelear"
+
+  # ---- apuestas ----
+  bet-set: "&aApuestas en la room &e%room%&a: &e%value%"
+  bet-team-room: "&cLas apuestas solo funcionan en rooms 1v1."
+  bet-opened: "&eSe abrió el menú de apuesta. Tocá un item de tu inventario para apostarlo y después aceptá."
+  bet-full: "&cNo tenés más lugar para apostar items."
+  bet-blocked: "&cEse item no se puede apostar."
+  bet-inventory-full: "&cTu inventario está lleno, hacé lugar para retirar el item."
+  bet-need-items: "&cTenés que apostar al menos &e%min% &citem para aceptar."
+  bet-accepted-other: "&e%player% aceptó la apuesta."
+  bet-countdown-start: "&eLos dos aceptaron. La apuesta se confirma en &6%time%s&e. Para cancelar tocá rechazar."
+  bet-locked: "&a¡Apuesta confirmada! &7El que gane se lleva todo. ¡A pelear!"
+  bet-cancelled-rejected: "&c%player% rechazó la apuesta. Se devolvieron los items y se cerró la room."
+  bet-cancelled-closed: "&c%player% cerró el menú. Se canceló la apuesta y se devolvieron los items."
+  bet-cancelled-left: "&c%player% salió de la room. Se canceló la apuesta y se devolvieron los items."
+  bet-won: "&a¡Ganaste la apuesta! &7Recibiste &f%items% &7items."
+  bet-lost: "&cPerdiste la apuesta."
+  bet-refunded: "&eSe devolvieron las apuestas."
+  bet-refund-delivered: "&aSe te devolvieron los items que habías apostado."
 
   # ---- teams ----
   team-no-player: "&cEl jugador &e%player% &cno está conectado."
@@ -200,13 +229,14 @@ messages:
     - "&e/room delete <nombre>"
     - "&e/room setname <room> <nuevo nombre>"
     - "&e/room mode <room> <1v1|2v2|3v3|4v4>"
+    - "&e/room bet <room> on/off &7- Room de apuesta (solo 1v1)"
     - "&e/room utilities <room> on/off"
     - "&e/room effects <room> add <efecto> <segundos|infinite> [nivel]"
     - "&e/room effects <room> remove <efecto>"
     - "&e/room keepinventory <room> true/false"
     - "&e/room blocks <room> on/off/<MATERIAL>"
     - "&e/room times &7- Lista de tiempos con [click para editar]"
-    - "&e/room settime <death|leave|disconnect|spawn|team> [segundos]"
+    - "&e/room settime <death|leave|disconnect|spawn|team|bet> [segundos]"
     - "&e/room team <2v2|3v3|4v4> invite <nick> <aliado|enemigo>"
     - "&e/room team accept|deny|leave|info"
     - "&e/room reload &7- Recarga config, menu y room.yml"
