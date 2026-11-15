@@ -26,6 +26,9 @@ public class Room {
     public boolean utilities = false;
     public boolean keepInventory = false;
 
+    /** Room de apuesta (solo 1v1): al entrar los 2 se abre el menú de apuesta. */
+    public boolean bet = false;
+
     /** Material con el que se cierra la barrera (se cambia con /room blocks). */
     public String blocks = "GLASS";
     /** true = la barrera está cerrada (puesta), false = abierta. */
@@ -49,6 +52,8 @@ public class Room {
     public boolean closing = false;
     /** Partida de equipos en curso (solo rooms 2v2, 3v3, 4v4). */
     public TeamMatch match;
+    /** Apuesta en curso (menú abierto o items en escrow). */
+    public BetSession betSession;
     public BukkitTask startTask, closeTask;
 
     public Room(String name) {
