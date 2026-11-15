@@ -197,9 +197,36 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 r.teamSize = size;
+                if (size > 1) r.bet = false; // las apuestas son solo para 1v1
                 m.save();
                 s.sendMessage(plugin.msg("mode-set", "%room%", r.name, "%mode%", r.modeName()));
                 plugin.teams().checkPending();
+                return true;
+            }
+
+            case "bet": {
+                if (a.length < 3) {
+                    usage(s, "/room bet <room> on/off");
+                    return true;
+                }
+                Room r = room(s, a[1]);
+                if (r == null) return true;
+                Boolean v = onOff(a[2]);
+                if (v == null) {
+                    usage(s, "/room bet <room> on/off");
+                    return true;
+                }
+                if (v && r.teamSize > 1) {
+                    s.sendMessage(plugin.msg("bet-team-room"));
+                    return true;
+                }
+                if (r.active || r.closing || !r.players.isEmpty()) {
+                    s.sendMessage(plugin.msg("room-busy", "%room%", r.name));
+                    return true;
+                }
+                r.bet = v;
+                m.save();
+                s.sendMessage(plugin.msg("bet-set", "%room%", r.name, "%value%", v ? "on" : "off"));
                 return true;
             }
 
@@ -341,7 +368,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
             }
 
             case "settime": {
-                String help = "/room settime <death|leave|disconnect|spawn|team> [segundos]";
+                String help = "/room settime <death|leave|disconnect|spawn|team|bet> [segundos]";
                 if (a.length < 2) {
                     usage(s, help);
                     return true;
@@ -488,7 +515,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
             List<String> subs = new ArrayList<>();
             subs.add("team");
             if (admin) {
-                subs.addAll(Arrays.asList("wand", "create", "save", "delete", "setname", "mode", "utilities",
+                subs.addAll(Arrays.asList("wand", "create", "save", "delete", "setname", "mode", "bet", "utilities",
                         "effects", "keepinventory", "blocks", "times", "settime", "reload"));
             }
             return filter(subs, a[0]);
@@ -504,7 +531,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
             if (sub.equals("settime")) {
                 return filter(Arrays.asList(TimeEditor.KEYS), a[1]);
             }
-            if (Arrays.asList("save", "delete", "setname", "mode", "utilities", "effects", "keepinventory", "blocks").contains(sub)) {
+            if (Arrays.asList("save", "delete", "setname", "mode", "bet", "utilities", "effects", "keepinventory", "blocks").contains(sub)) {
                 return filter(roomNames(), a[1]);
             }
             return new ArrayList<>();
@@ -513,6 +540,7 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
             switch (sub) {
                 case "mode":
                     return filter(Arrays.asList("1v1", "2v2", "3v3", "4v4"), a[2]);
+                case "bet":
                 case "utilities":
                     return filter(Arrays.asList("on", "off"), a[2]);
                 case "keepinventory":
@@ -542,4 +570,4 @@ public class RoomCommand implements CommandExecutor, TabCompleter {
         }
         return new ArrayList<>();
     }
-                }
+                    }
