@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  */
 public class TimeEditor implements Listener {
 
-    public static final String[] KEYS = {"death", "leave", "disconnect", "spawn", "team"};
+    public static final String[] KEYS = {"death", "leave", "disconnect", "spawn", "team", "bet"};
 
     private static final Pattern NUMBER = Pattern.compile("^(\\d{1,4})\\s*(s|seg|segundos)?$", Pattern.CASE_INSENSITIVE);
     private static final Pattern KEY_LINE = Pattern.compile("^(\\s*)([A-Za-z0-9_-]+):(\\s*)(.*)$");
@@ -67,6 +67,8 @@ public class TimeEditor implements Listener {
                 return "settings.spawn-delay";
             case "team":
                 return "team.countdown";
+            case "bet":
+                return "bet.countdown";
             default:
                 return null;
         }
@@ -84,7 +86,7 @@ public class TimeEditor implements Listener {
     }
 
     public static int max(String key) {
-        return key.equals("team") ? 60 : 600;
+        return (key.equals("team") || key.equals("bet")) ? 60 : 600;
     }
 
     private String label(String key) {
@@ -209,4 +211,4 @@ public class TimeEditor implements Listener {
             p.spigot().sendMessage(text);
         }
     }
-          }
+}
