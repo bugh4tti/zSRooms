@@ -86,6 +86,7 @@ public class RoomListener implements Listener {
                     s.pos2 = l;
                     p.sendMessage(plugin.msg("sel-pos2", "%pos%", pos(l)));
                 }
+                plugin.wandParticle(p, l, "axe");
                 break;
             case "pick":
                 if (left) {
@@ -94,6 +95,7 @@ public class RoomListener implements Listener {
                     ex.setPitch(p.getLocation().getPitch());
                     s.exit = ex;
                     p.sendMessage(plugin.msg("sel-exit", "%pos%", pos(l)));
+                    plugin.wandParticle(p, l, "pick");
                 } else {
                     p.sendMessage(plugin.msg("sel-status",
                             "%p1%", ok(s.pos1), "%p2%", ok(s.pos2), "%ex%", ok(s.exit),
@@ -108,6 +110,7 @@ public class RoomListener implements Listener {
                     s.bpos2 = l;
                     p.sendMessage(plugin.msg("sel-bpos2", "%pos%", pos(l)));
                 }
+                plugin.wandParticle(p, l, "hoe");
                 break;
             default:
                 break;
@@ -306,4 +309,4 @@ public class RoomListener implements Listener {
             e.setCancelled(false);
         }
     }
-}
+    }
